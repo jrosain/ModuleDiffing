@@ -23,5 +23,5 @@ let decompose (str: string) (granularity: int) =
 let diffing (str1: string) (str2: string) (granularity: int) : float =
   let set_str1 = decompose str1 granularity in
   let set_str2 = decompose str2 granularity in
-  (float_of_int (SS.cardinal (SS.inter set_str1 set_str2)) /.
-    float_of_int (SS.cardinal (SS.union set_str1 set_str2)))
+  1. -. ((float_of_int (SS.cardinal (SS.inter set_str1 set_str2)) /.
+    float_of_int (SS.cardinal (SS.union set_str1 set_str2))))
