@@ -32,7 +32,7 @@ let main () =
     if !damerau then
       Printf.printf "Damerau ";
     Printf.printf "Levenshtein similarity: %d\n" res; ()
-
+   
 let _ = main ()
 
     
