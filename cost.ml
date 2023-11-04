@@ -10,5 +10,4 @@ let cc = 73
 let cg = 73
 let cm = 28
 
-(* TODO:
-let cu (first : something) (second : something) : t = ... *)
+let int_to_cost (v: int) : t = v

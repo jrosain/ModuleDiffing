@@ -30,5 +30,5 @@ val cg : t
 (** The cost of the movement of a subtree in the AST. *)
 val cm : t
 
-(* TODO: (we don't know what 'something' for now)
-val cu : something -> something -> t *)
+val int_to_cost : int -> t
+(* The update cost is given by the data-structure. *)
