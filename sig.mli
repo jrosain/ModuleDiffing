@@ -2,33 +2,24 @@
     algorithm. 
 
     It defines:
-    * The module G that is used for graphs representation.
+    * The type of edges that works with costs.
     * The module type that any (tree) structure given to the algorithm should at least implement.
 *)
-
-module Node : sig
-  type t
-  
-  val compare : t -> t -> int
-  val hash : t -> int
-  val equal : t -> t -> bool
-end
 
 module Edge : sig
   type t
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
-  val default : Cost.t
+  val default : t
 end
-
-(** The module that implements a graph. To access the type of a graph, use G.t *)
-module G : Graph.Sig.I
 
 module type INPUT = sig
   type i (** The type of the input data-structure. *)
   type t (** The type of the object manipulated. *)
-  type v (** The type of the internal representation of an element. *)
+  type v (** The type of the internal representation of an element. 
+             It should be comparable using Stdlib.compare, hashable by Hashtbl.hash and
+             compared with (=). *)
 
   val create : i -> t
   val parent : t -> v -> v option (** Returns the parent of the given element in the original
