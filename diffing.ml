@@ -1,6 +1,8 @@
 module Make(I: Sig.INPUT) = struct
   type patch = Empty
 
+  (* -------------------- Graph definition -------------------- *)
+  
   (* Creation of a generic Node from the INPUT type. *)
   module Node = struct
     type t = Original of I.v | Minus | Plus
@@ -12,7 +14,9 @@ module Make(I: Sig.INPUT) = struct
   (* Instantiation of the module of the working graph. *)
   module G = Graph.Imperative.Graph.ConcreteLabeled(Node)(Sig.Edge)
 
-  (* -------------------- PART1 -------------------- *)
+  (* -------------------- End of Graph definition -------------------- *)
+  
+  (* -------------------- Graph creation -------------------- *)
 
   (* The goal is to create a complete bipartite graph between the nodes : (t1 *)
   (* and insertion) and (t2 and deletion). *)
@@ -26,33 +30,17 @@ module Make(I: Sig.INPUT) = struct
     List.iter (fun x -> List.iter (G.add_edge g x) nodes1) nodes2;
     g
 
-  (* We want to prune as much edges as possible. For that, we compute *)
-  let prune_edges (graph: G.t) (t1: I.t) (t2: I.t) =
-    ()
+  (* -------------------- End of Graph creation  -------------------- *)
 
-  (* -------------------- END OF PART1 -------------------- *)
+  (* -------------------- Modules instantiation -------------------- *)
 
-  (* TODO: 1 functor for every part of the algorithm taking as argument I,
-  Node, and the module G. *)
+  module P = Pruning.Make(I)(G)
+
+  (* -------------------- End of Modules instantation -------------------- *)
   
   let exec (t1: I.t) (t2: I.t) : patch =
     let graph = create_bipartite t1 t2 in
-    prune_edges graph t1 t2;
+    let graph = P.prune t1 t2 graph in
     (* Then flows then patch reconstruction *)
     Empty
 end
-
-(* By maintaining a priority queue (based on edge costs) of edges incident on *)
-(* each node of the induced graph, the test to determine whether an edge may be *)
-(* pruned can be performed in constant time. If the edge is pruned, removing it *)
-(* from the induced graph requires constant time, while removing it from the *)
-(* priority queues at each of its nodes requires O(logn) time. When an edge [m; *)
-(* n] is pruned, we also record the changes to the costs cm?(m; p(n)), cm?(n; *)
-(* p(m)), cmf (m; p(n)), and cmf (n; p(m)), which can be done in constant *)
-(* time. Thus, pruning an edge requires O(logn) time. Since at most O(n^2) are *)
-(* pruned, the total worst case cost of the pruning phase is O(n^2logn) *) 
-
-(* Goal: precompute all the costs and keep them in a data-structure.
-   Update them on the fly in O(1).
-
- *)
