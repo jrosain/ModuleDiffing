@@ -5,6 +5,8 @@ module Edge = struct
   let default = Cost.default
 end
 
+module type G = Graph.Sig.I
+
 (* We need to duplicate otherwise it doesn't compile. *)
 module type INPUT = sig
   type i

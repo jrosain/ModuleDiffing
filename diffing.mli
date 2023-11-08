@@ -3,5 +3,7 @@
 module Make(I: Sig.INPUT) : sig
   type patch
 
+  module G : Sig.G
+
   val exec : I.t -> I.t -> patch
 end

@@ -14,6 +14,8 @@ module Edge : sig
   val default : t
 end
 
+module type G = Graph.Sig.I
+
 module type INPUT = sig
   type i (** The type of the input data-structure. *)
   type t (** The type of the object manipulated. *)
