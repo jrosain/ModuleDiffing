@@ -31,8 +31,8 @@ module type INPUT = sig
   type v (** The type of the internal representation of an element. *)
 
   val create : i -> t
-  val parent : t -> v -> v (** Returns the parent of the given element in the original
-                               data-structure. *)
+  val parent : t -> v -> v option (** Returns the parent of the given element in the original
+                                      data-structure. *)
   val children : t -> v -> v list (** Returns the children of the given element in the original
                                       data-structure. *)
   val elements : t -> v list (** Returns a list with all the elements. *)

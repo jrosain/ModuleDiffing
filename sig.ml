@@ -22,7 +22,7 @@ module type INPUT = sig
   type v
 
   val create : i -> t
-  val parent : t -> v -> v
+  val parent : t -> v -> v option
                           
   val children : t -> v -> v list
                                  
