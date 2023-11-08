@@ -37,9 +37,9 @@ module Test = struct
 
   let create (input: i) : t =
     let rec aux (tree: i) : v list =
-      match input with
-      | Leaf -> []
-      | Node (v, children) -> List.fold_left (fun acc child -> (acc) @ (aux child)) [v] children
+      match tree with
+      | Tree.Leaf -> []
+      | Tree.Node (v, children) -> v :: List.flatten (List.map aux children)
     in (aux input, input)
          
   let parent (tree: t) (index: v) : v = Tree.parent (snd tree) (List.nth (fst tree) index)
@@ -57,5 +57,6 @@ let launch_test () =
   let tree2 = Tree.Node(51, [Tree.Node(52, [Tree.Node(53, [])]) ; Tree.Node(55, [Tree.Node(56, []) ; Tree.Node(57, [Tree.Node(58, [Tree.Node(59, [])])]) ; Tree.Node(61, [Tree.Node(62, [])])]) ; Tree.Node(60, [Tree.Node(63, [Tree.Node(64, [])])])]) in
   let t1 = Test.create tree1 in
   let t2 = Test.create tree2 in
+
   let patch = Diff.exec t1 t2 in
   ()
