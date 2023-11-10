@@ -5,7 +5,9 @@ module Make(I: Sig.INPUT) = struct
   
   (* Creation of a generic Node from the INPUT type. *)
   module Node = struct
-    type t = Original of I.v | Minus | Plus
+    module Input = I
+    
+    type t = Original of Input.v | Minus | Plus
     let compare = Stdlib.compare
     let hash = Hashtbl.hash
     let equal = (=)
@@ -27,14 +29,14 @@ module Make(I: Sig.INPUT) = struct
     let g = G.create ~size:((List.length nodes1) + (List.length nodes2)) () in
     List.iter (G.add_vertex g) nodes1;
     List.iter (G.add_vertex g) nodes2;
-    List.iter (fun x -> List.iter (G.add_edge g x) nodes1) nodes2;
+    List.iter (fun x -> List.iter (G.add_edge g x) nodes2) nodes1;
     g
 
   (* -------------------- End of Graph creation  -------------------- *)
 
   (* -------------------- Modules instantiation -------------------- *)
 
-  module P = Pruning.Make(I)(G)
+  module P = Pruning.Make(I)(Node)(G)
 
   (* -------------------- End of Modules instantation -------------------- *)
   

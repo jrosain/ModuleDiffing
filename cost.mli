@@ -13,7 +13,7 @@
 type t
 
 (** The default value that should take an edge if no cost has been computed. *)
-val default : t
+val null : t
 
 (** The cost of the insertion of a node in the AST. *)
 val ci : t

@@ -1,6 +1,6 @@
 type t = int
 
-let default = 0
+let null = 0
 
 (* /!\ ARBITRARY VALUES /!\ *)
 (* They'll need to be determined by testing the algorithm. *)
