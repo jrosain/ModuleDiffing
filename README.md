@@ -5,4 +5,5 @@ This directory aims towards giving better error messages for OCaml modules throu
 ## Dependencies
 
 This project has the following dependencies:
-* `ocamlgraph` (which can be installed by `opam install ocamlgraph`.
+* `ocamlgraph` (which can be installed by `opam install ocamlgraph`).
+* `core_kernel` (which can be installed by `opam install core_kernel`).

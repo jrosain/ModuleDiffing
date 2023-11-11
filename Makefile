@@ -1,5 +1,5 @@
 all:
-	ocamlbuild -pkg ocamlgraph main.native
+	ocamlbuild -use-ocamlfind -pkg ocamlgraph -pkg core_kernel.pairing_heap main.native
 	ln -f -s main.native diffing
 	chmod +x diffing
 

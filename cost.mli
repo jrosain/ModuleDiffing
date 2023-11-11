@@ -10,7 +10,7 @@
     It also defines the function that is used to compute the update cost. *)
 
 (** The type of the costs. *)
-type t
+type t = int
 
 (** The default value that should take an edge if no cost has been computed. *)
 val null : t
@@ -29,6 +29,12 @@ val cg : t
 
 (** The cost of the movement of a subtree in the AST. *)
 val cm : t
+
+(** The maximum between cm, cc and cg. *)
+val ct : t
+
+(** Compares two costs. *)
+val compare : t -> t -> int
 
 val int_to_cost : int -> t
 (* The update cost is given by the data-structure. *)
