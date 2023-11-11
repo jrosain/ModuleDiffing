@@ -42,7 +42,9 @@ module Make(I: Sig.INPUT) = struct
   
   let exec (t1: I.t) (t2: I.t) : patch =
     let graph = create_bipartite t1 t2 in
+    Printf.printf "#edges before prune: %d\n" (G.nb_edges graph);
     let graph = P.prune t1 t2 graph in
+    Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
     (* Then flows then patch reconstruction *)
     Empty
 end

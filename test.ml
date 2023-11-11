@@ -53,12 +53,14 @@ module Test = struct
     let rec aux (tree: i) : v list =
       match tree with
       | Tree.Null -> []
-      | Tree.Node (v, children) -> v :: List.flatten (List.map aux children)
+      | Tree.Node (v, children) -> v :: (List.flatten (List.map aux children))
     in (aux input, input)
          
-  let parent (tree: t) (index: v) : v option = Tree.parent (snd tree) (List.nth (fst tree) index)
+  let parent (tree: t) (index: v) : v option =
+    Tree.parent (snd tree) index
   
-  let children (tree: t) (index: v) : v list = Tree.children (snd tree) (List.nth (fst tree) index)
+  let children (tree: t) (index: v) : v list =
+    Tree.children (snd tree) index
     
   let elements (tree: t) : v list = (fst tree)
   let compare (tree: t) (x: v) (y: v) : Cost.t = Cost.int_to_cost (if x > y then (x - y) else (y - x))

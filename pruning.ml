@@ -51,8 +51,8 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
         (update_costs: cost_table) (t1: I.t) (t2: I.t) (graph: G.t) : Cost.t =
     match (x, y) with
     | N.Plus, N.Minus -> Cost.null
-    | N.Plus, _ -> Cost.ci
-    | _, N.Minus -> Cost.cd
+    | N.Plus, _ | _, N.Plus -> Cost.ci
+    | _, N.Minus | N.Minus, _ -> Cost.cd
     | N.Original m, N.Original n ->
        let cw = Hashtbl.find update_costs (x, y) in
        let cm1 = fun x y -> Cost.cm - (Hashtbl.find fm1 (mk_v x,y)) in
@@ -62,7 +62,6 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
        let right = List.fold_left (fun s n' -> s + (Cost.cc * ((G.out_degree graph (mk_v n')) - 1) +
                                                       (cm2 n' x))) 0 (I.children t2 n) in
        2*cw + left + right
-    | N.Minus, _ | _, N.Plus -> assert false
 
   (* Inits the min-heap at node x. *)
   let init_min_heap (x: G.V.t) (succ: G.V.t list) (fm1: cost_table) (fm2: cost_table)
@@ -124,20 +123,57 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     | _, _ -> Cost.null
   
   (* Tries to prune an edge [m,n]. If it succeeds, tries to prune the updated edges. *)
-  let try_prune (m: G.V.t) (n: G.V.t) (fm1: cost_table) (fm2: cost_table)
-        (update_costs: cost_table) (ub_table: ub_table) (t1: I.t) (t2: I.t) (graph: G.t) : unit =
-    let lb_cost = compute_lower_bound m n fm1 fm2 update_costs t1 t2 graph in
-    if (is_prunable_1 m n lb_cost ub_table) || (is_prunable_2 lb_cost) then (
-      let m_ds = Hashtbl.find ub_table m in
-      let n_ds = Hashtbl.find ub_table n in
-      let token = Hashtbl.find (fst m_ds) n in
-      Heap.remove (snd m_ds) token;
-      let token = Hashtbl.find (fst n_ds) m in
-      Heap.remove (snd n_ds) token;
-      G.remove_edge graph m n;
-      () (* Update: cmf(m, p(n)) and cmf(n, p(m)) and launch try_prune on the nodes that
-            make their lower-bound change. *)
-    )
+  let rec try_prune (m: G.V.t) (n: G.V.t) (fm1: cost_table) (fm2: cost_table)
+        (update_costs: cost_table) (ub_table: ub_table) (t1: I.t) (t2: I.t) (graph: G.t) :
+            unit =
+    if (G.mem_edge graph m n) then
+      let lb_cost = compute_lower_bound m n fm1 fm2 update_costs t1 t2 graph in
+      if (is_prunable_1 m n lb_cost ub_table) || (is_prunable_2 lb_cost) then (
+        (* Remove the edge in the graph & in the priority queues. *)
+        let m_ds = Hashtbl.find ub_table m in
+        let n_ds = Hashtbl.find ub_table n in
+        let token = Hashtbl.find (fst m_ds) n in
+        Heap.remove (snd m_ds) token;
+        let token = Hashtbl.find (fst n_ds) m in
+        Heap.remove (snd n_ds) token;
+        G.remove_edge graph m n;
+        (* Update of the costs (forced move costs and upper-bound costs). *)
+        match (m,n) with
+        | N.Original x, N.Original y -> 
+           let parent_m = I.parent t1 x in
+           let parent_n = I.parent t2 y in
+           (match parent_m with
+            | None -> ()
+            | Some pm' ->
+               let pm = mk_v pm' in
+               let fmc2 = (forced_move_cost y pm' t2 t1 graph) in
+               Hashtbl.replace fm2 (n, pm) fmc2;
+               Hashtbl.replace fm2 (pm, n) fmc2;
+               let ubpmn = compute_upper_bound pm n fm1 fm2 update_costs t1 t2 graph in
+               let token = Heap.update (snd n_ds) (Hashtbl.find (fst n_ds) pm) ubpmn in
+               Hashtbl.replace (fst n_ds) pm token;
+               let pm_ds = Hashtbl.find ub_table pm in
+               let token = Heap.update (snd pm_ds) (Hashtbl.find (fst pm_ds) n) ubpmn in
+               Hashtbl.replace (fst pm_ds) n token;
+               try_prune pm n fm1 fm2 update_costs ub_table t1 t2 graph               
+           );
+           (match parent_n with
+            | None -> ()
+            | Some pn' ->
+               let pn = mk_v pn' in
+               let fmc1 = (forced_move_cost x pn' t1 t2 graph) in
+               Hashtbl.replace fm1 (m, pn) fmc1;
+               Hashtbl.replace fm1 (pn, m) fmc1;
+               let ubpnm = compute_upper_bound m pn fm1 fm2 update_costs t1 t2 graph in
+               let token = Heap.update (snd m_ds) (Hashtbl.find (fst m_ds) pn) ubpnm in
+               Hashtbl.replace (fst m_ds) pn token;
+               let pn_ds = Hashtbl.find ub_table pn in
+               let token = Heap.update (snd pn_ds) (Hashtbl.find (fst pn_ds) m) ubpnm in
+               Hashtbl.replace (fst pn_ds) m token;
+               try_prune m pn fm1 fm2 update_costs ub_table t1 t2 graph
+           );
+        | _, _ -> ()
+      )
   
   let prune (t1: I.t) (t2: I.t) (graph: G.t) : G.t =
     let fm1 = compute_forced_moves t1 t2 graph in
