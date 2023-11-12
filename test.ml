@@ -63,7 +63,9 @@ module Test = struct
     Tree.children (snd tree) index
     
   let elements (tree: t) : v list = (fst tree)
-  let compare (tree: t) (x: v) (y: v) : Cost.t = Cost.int_to_cost (if x > y then (x - y) else (y - x))
+  let compare (tree: t) (x: v) (y: v) : Cost.t = Cost.int_to_cost (if x > y then (x - y)
+                                                                   else (y - x))
+  let print_v (x: v) = print_int x
 end
 
 module Diff = Diffing.Make(Test)

@@ -10,7 +10,7 @@
     It also defines the function that is used to compute the update cost. *)
 
 (** The type of the costs. *)
-type t = int
+type t
 
 (** The default value that should take an edge if no cost has been computed. *)
 val null : t
@@ -32,6 +32,29 @@ val cm : t
 
 (** The maximum between cm, cc and cg. *)
 val ct : t
+
+(** Returns a function that computes the conditional move of a given edge using a
+    function that computes the forced move of this very edge. *)
+val f_conditional_move : ('a -> 'a -> t) -> ('a -> 'a -> t)
+  
+(** Computes the upper-bound cost based on functions that give:
+    (i) The degree of the considered element.
+    (ii) The children in the input tree of the considered element.
+    (iii) The cost of a conditional move for an edge (obtained using f_conditional_move). 
+ *)
+val upper_bound : ('a -> int) -> 'a list -> 'a list -> ('a -> 'a -> t) -> ('a -> 'a -> t)
+                  -> t -> 'a -> 'a -> t
+
+(** Computes the lower-buond cost based on functions that give the forced move cost of 
+    edges. *)
+val lower_bound : ('a -> t) -> 'a list -> ('a -> t) -> 'a list -> t -> t
+
+(** Returns true when the lower-bound (first argument) can be pruned by the values of the
+    upper-bounds (second and third arguments). *)
+val prune_rule_1 : t -> t -> t -> bool
+
+(** Returns true when the lower-bound is greater than an insertion and a deletion. *)
+val prune_rule_2 : t -> bool
 
 (** Compares two costs. *)
 val compare : t -> t -> int

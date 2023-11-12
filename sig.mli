@@ -21,6 +21,7 @@ module type INPUT = sig
   val elements : t -> v list (** Returns a list with all the elements. *)
   val compare : t -> v -> v -> Cost.t (** Returns the cost that is needed to update the first
                                           element as the second one (should be symmetric)*)
+  val print_v : v -> unit
 end
 
 module Edge : sig

@@ -6,3 +6,4 @@ all:
 clean:
 	ocamlbuild -clean
 	rm -f diffing
+	rm -f *~

@@ -45,6 +45,20 @@ module Make(I: Sig.INPUT) = struct
     Printf.printf "#edges before prune: %d\n" (G.nb_edges graph);
     let graph = P.prune t1 t2 graph in
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
+    G.iter_edges
+      (fun x y ->
+        print_string "[";
+        (match x with
+        | Node.Plus -> print_string "+"
+        | Node.Minus -> print_string "-"
+        | Node.Original m -> I.print_v m);
+        print_string ",";
+        (match y with
+        | Node.Plus -> print_string "+"
+        | Node.Minus -> print_string "-"
+        | Node.Original m -> I.print_v m);
+        print_string "]")
+      graph;
     (* Then flows then patch reconstruction *)
     Empty
 end

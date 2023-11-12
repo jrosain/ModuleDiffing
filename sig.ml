@@ -11,6 +11,7 @@ module type INPUT = sig
                                  
   val elements : t -> v list
   val compare : t -> v -> v -> Cost.t
+  val print_v : v -> unit
 end
 
 module Edge = struct
