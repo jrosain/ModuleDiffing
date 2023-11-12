@@ -7,14 +7,18 @@
 *)
 
 module Edge : sig
-  type t
+  type t = Label.t * Cost.t
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
   val default : t
 end
 
-module type G = Graph.Sig.I
+module type G = Graph.Sig.I 
+
+
+
+
 
 module type INPUT = sig
   type i (** The type of the input data-structure. *)
@@ -32,3 +36,15 @@ module type INPUT = sig
   val compare : t -> v -> v -> Cost.t (** Returns the cost that is needed to update the first
                                           element as the second one (should be symmetric)*)
 end
+
+
+
+module type Node = sig 
+  module Input : INPUT
+  type t = Original of Input.v | Minus | Plus 
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val hash : t -> int
+  val equal : t -> t -> bool
+end
+

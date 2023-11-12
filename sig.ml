@@ -1,8 +1,8 @@
 module Edge = struct
-  type t = Cost.t
+  type t = Label.t * Cost.t
   let compare = Stdlib.compare
   let equal = (=)
-  let default = Cost.default
+  let default = Label.default, Cost.default
 end
 
 module type G = Graph.Sig.I
@@ -20,4 +20,16 @@ module type INPUT = sig
                                  
   val elements : t -> v list
   val compare : t -> v -> v -> Cost.t
+  
 end
+
+
+module type Node = sig 
+  module Input : INPUT
+  type t = Original of Input.v | Minus | Plus 
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val hash : t -> int
+  val equal : t -> t -> bool
+end
+
