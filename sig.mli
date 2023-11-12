@@ -25,7 +25,7 @@ module type INPUT = sig
 end
 
 module Edge : sig
-  type t
+  type t = Cost.t
 
   val compare : t -> t -> int
   val equal : t -> t -> bool

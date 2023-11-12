@@ -4,11 +4,11 @@ let null = 0
 
 (* /!\ ARBITRARY VALUES /!\ *)
 (* They'll need to be determined by testing the algorithm. *)
-let ci = 12
-let cd = 12
-let cc = 73
-let cg = 73
-let cm = 28
+let ci = 1
+let cd = 1
+let cc = 2
+let cg = 2
+let cm = 1
 let ct = Stdlib.max cm (Stdlib.max cc cg)
 
 let f_conditional_move (f: 'a -> 'a -> t) : ('a -> 'a -> t) =

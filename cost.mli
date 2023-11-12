@@ -30,9 +30,6 @@ val cg : t
 (** The cost of the movement of a subtree in the AST. *)
 val cm : t
 
-(** The maximum between cm, cc and cg. *)
-val ct : t
-
 (** Returns a function that computes the conditional move of a given edge using a
     function that computes the forced move of this very edge. *)
 val f_conditional_move : ('a -> 'a -> t) -> ('a -> 'a -> t)
