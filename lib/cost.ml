@@ -26,6 +26,9 @@ let prune_rule_1 (lb: t) (ub1: t) (ub2: t) : bool =
 let prune_rule_2 (lb: t) : bool =
   lb >= 2*(cd + ci)
 
+let prune_rule_3 (lb: t) (ciocd: t) : bool =
+  lb < 2*ciocd
+
 let lower_bound (forced1: 'a -> t) (l1: 'a list) (forced2: 'a -> t) (l2: 'a list) (cu: t)
     : t =
   let ca = List.fold_left (fun s m' -> s + (forced1 m')) 0 l1 in

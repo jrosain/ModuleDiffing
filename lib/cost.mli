@@ -53,6 +53,9 @@ val prune_rule_1 : t -> t -> t -> bool
 (** Returns true when the lower-bound is greater than an insertion and a deletion. *)
 val prune_rule_2 : t -> bool
 
+(** Returns true when the lower-bound is lower than the cost of the insertion/deletion. *)
+val prune_rule_3 : t -> t -> bool
+
 (** Compares two costs. *)
 val compare : t -> t -> int
 

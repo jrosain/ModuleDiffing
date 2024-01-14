@@ -37,7 +37,7 @@ module Make(I: Sig.INPUT) = struct
   (* -------------------- Modules instantiation -------------------- *)
 
   module P = Pruning.Make(I)(Node)(G)
-
+  
   (* -------------------- End of Modules instantation -------------------- *)
   
   let exec (t1: I.t) (t2: I.t) : patch =
@@ -47,7 +47,7 @@ module Make(I: Sig.INPUT) = struct
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
     G.iter_edges
       (fun x y ->
-        print_string "[";
+        print_string "";
         (match x with
         | Node.Plus -> print_string "+"
         | Node.Minus -> print_string "-"
@@ -57,7 +57,7 @@ module Make(I: Sig.INPUT) = struct
         | Node.Plus -> print_string "+"
         | Node.Minus -> print_string "-"
         | Node.Original m -> I.print_v m);
-        print_string "]")
+        print_string " ")
       graph;
     (* Then flows then patch reconstruction *)
     Empty

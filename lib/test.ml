@@ -68,11 +68,11 @@ module Test = struct
     let s1, s2 = (fst x), (fst y) in
     let total = ref 0 in
     let f =
-      (fun i c ->
-        try total := !total + (Int.abs ((Char.code c) - (Char.code s2.[i])))
-        with _ -> total := !total + (Char.code c) - (Char.code 'a')) in
-    (if (String.length s1) >= (String.length s2) then String.iteri f s1
-     else String.iteri f s2);
+      (fun dest i c ->
+        try total := !total + (Int.abs ((Char.code c) - (Char.code dest.[i])))
+        with _ -> total := !total + (Char.code c) - (Char.code 'a') + 1) in
+    (if (String.length s1) >= (String.length s2) then String.iteri (f s2) s1
+     else String.iteri (f s1) s2);
     Cost.int_to_cost (!total)
     
   let print_v (x: v) = print_int (snd x)

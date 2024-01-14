@@ -191,7 +191,7 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
        | N.Original m, N.Original n ->
           let cu = CostTable.get update_costs x y in
           (cm1 y), (I.children t1 m), (cm2 x), (I.children t2 n), cu
-       (* These cases are managed afterwards. *)
+       (* these cases are managed afterwards. *)
        | _, _ -> nil, [], nil, [], Cost.null) in
     Cost.lower_bound cma (transform ca) cmb (transform cb) cu
 
@@ -269,6 +269,42 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
                   graph m)
       (N.Plus :: (transform (I.elements t1)))
 
+  (* For an element of t1, if there exists an element of t2 where the lower bound cost is lower than
+     deleting, then remove the edge to Node.Minus if exists. *)
+  let remove_minus_if_better_lb (m: G.V.t) (fm: fm_table) (update_costs: cost_table) (t1: I.t)
+        (t2: I.t) (graph: G.t) : unit =
+    let has_lower = ref false in
+    (if (G.mem_edge graph m (N.Minus)) then
+       List.iter (fun n ->
+           match n with
+           | N.Original _ -> let lb_cost = compute_lower_bound m n fm update_costs t1 t2 in
+                             has_lower := Cost.prune_rule_3 lb_cost Cost.cd
+           | _ -> ())
+        (G.succ graph m));
+    if !has_lower then
+      G.remove_edge graph m (N.Minus)
+    
+  (* For an element of t2, if there exists an element of t1 where the lower bound cost is lower than
+     inserting, then remove the edge to Node.Plus if exists. *)
+  let remove_plus_if_better_lb (m: G.V.t) (fm: fm_table) (update_costs: cost_table) (t1: I.t)
+        (t2: I.t) (graph: G.t) : unit =
+    let has_lower = ref false in
+    (if (G.mem_edge graph m (N.Plus)) then
+       List.iter (fun n ->
+           match n with
+           | N.Original _ -> let lb_cost = compute_lower_bound m n fm update_costs t1 t2 in
+                             has_lower := Cost.prune_rule_3 lb_cost Cost.ci
+           | _ -> ())
+        (G.succ graph m));
+    if !has_lower then
+      G.remove_edge graph m (N.Plus)
+
+  (* Removes all the edges to [+] and [-] that should not be here. *)
+  let remove_plus_minus_useless_edges (fm: fm_table) (update_costs: cost_table) (t1: I.t) (t2: I.t)
+        (graph: G.t) : unit =
+    List.iter (fun m -> remove_minus_if_better_lb m fm update_costs t1 t2 graph) (transform (I.elements t1));
+    List.iter (fun m -> remove_plus_if_better_lb m fm update_costs t1 t2 graph) (transform (I.elements t2))
+
   (* Creates a graph that has the right labels on each edge. *)
   let update_labels (t1: I.t) (t2: I.t) (graph: G.t) (fm: fm_table)
         (update_costs: cost_table) : G.t =
@@ -294,5 +330,6 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
     let update_costs = compute_update_costs t1 t2 (G.nb_edges graph) in
     let upper_bound_costs = init_upper_bounds t1 t2 graph fm update_costs in
     iterate_pruning t1 t2 graph fm update_costs upper_bound_costs;
+    remove_plus_minus_useless_edges fm update_costs t1 t2 graph;
     update_labels t1 t2 graph fm update_costs
 end
