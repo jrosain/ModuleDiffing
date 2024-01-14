@@ -6,7 +6,7 @@ module Tree = struct
   let parent (tree: t) (v: int) : (string * int) option =
     match tree with
     | Null -> failwith "No tree"
-    | Node ((_, k), ls) ->
+    | Node ((_, k), _) ->
        if k = (v) then None
        else
          let rec aux (tree: t) : (string * int) option =
@@ -64,7 +64,7 @@ module Test = struct
     Tree.children (snd tree) (snd index)
     
   let elements (tree: t) : v list = (fst tree)
-  let compare (tree: t) (x: v) (y: v) : Cost.t =
+  let compare (_: t) (x: v) (y: v) : Cost.t =
     let s1, s2 = (fst x), (fst y) in
     let total = ref 0 in
     let f =
@@ -98,5 +98,5 @@ let launch_test () =
   let t1 = Test.create tree1 in
   let t2 = Test.create tree2 in
 
-  let patch = Diff.exec t1 t2 in
+  let _ = Diff.exec t1 t2 in
   ()

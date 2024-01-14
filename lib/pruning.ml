@@ -151,7 +151,7 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
       (fun y ->
         let x, y = if reverse then y, x else x, y in
         let ub_cost = (compute_upper_bound x y fm update_costs t1 t2 graph) in
-        let x, y = if reverse then y, x else x, y in
+        let y = if reverse then x else y in
         UpperBoundHeap.add heap y ub_cost)
       succ;
     (heap)
@@ -176,10 +176,13 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
   (* Second pruning rule. *)
   let is_prunable_2 = Cost.prune_rule_2
 
+  (* Third pruning rule: if there is only 1 edge and the cost is lower than insertion +
+     suppression, then we can prune the insertion/deletion thing. *)
+
   (* Computation of the lower-bound. 
      We should be assured that x is in V(T1) U { + } and that y is in V(T2) U { - }. *)
   let compute_lower_bound (x: G.V.t) (y: G.V.t) (fm: fm_table) (update_costs : cost_table)
-        (t1: I.t) (t2: I.t) (graph: G.t) : Cost.t =
+        (t1: I.t) (t2: I.t) : Cost.t =
     let cm1 = fun n m' -> (ForcedMoves.get_t1 fm m' n) in
     let cm2 = fun m n' -> (ForcedMoves.get_t2 fm n' m) in
     let nil = fun _ -> Cost.null in
@@ -188,7 +191,7 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
        | N.Original m, N.Original n ->
           let cu = CostTable.get update_costs x y in
           (cm1 y), (I.children t1 m), (cm2 x), (I.children t2 n), cu
-       (* TODO: Really? *)
+       (* These cases are managed afterwards. *)
        | _, _ -> nil, [], nil, [], Cost.null) in
     Cost.lower_bound cma (transform ca) cmb (transform cb) cu
 
@@ -239,7 +242,7 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
   let rec try_prune (m: G.V.t) (n: G.V.t) (fm: fm_table) (update_costs: cost_table)
             (ub_table: ub_table) (t1: I.t) (t2: I.t) (graph: G.t) : unit =
     if (G.mem_edge graph m n) then
-      let lb_cost = compute_lower_bound m n fm update_costs t1 t2 graph in
+      let lb_cost = compute_lower_bound m n fm update_costs t1 t2 in
       if (is_prunable_1 m n lb_cost ub_table) || (is_prunable_2 lb_cost) then (
         remove_edge m n ub_table graph;
         (* If m & n are from t1 & t2, then we need to update the forced moves values of
@@ -248,8 +251,6 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
                       | N.Original x, N.Original y -> update_forced_moves x y fm t1 t2
                                                         update_costs graph ub_table
                       | _, _ -> None, None) in
-
-        (* TODO: what if we remove [+,N.Original z] or something..? *)
         (match pm with
          | None -> ()
          | Some parent -> try_prune parent n fm update_costs ub_table t1 t2 graph);
@@ -279,7 +280,7 @@ n         C-MF(m', n) = cm if there doesn't exist n' in C(n) s.t. m'n' is an edg
         List.iter
           (fun n ->
             if G.mem_edge graph m n then
-              let lower_bound_cost = compute_lower_bound m n fm update_costs t1 t2 graph in
+              let lower_bound_cost = compute_lower_bound m n fm update_costs t1 t2 in
               let edge = G.E.create m (lower_bound_cost) n in
               G.add_edge_e g edge)
        (N.Minus :: t2_vertices))

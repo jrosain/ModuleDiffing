@@ -1,9 +1,9 @@
 all:
-	ocamlbuild -use-ocamlfind -pkg ocamlgraph -pkg core_kernel.pairing_heap main.native
-	ln -f -s main.native diffing
-	chmod +x diffing
+	dune build
+	ln -s _build/main.native diffing
 
 clean:
-	ocamlbuild -clean
 	rm -f diffing
+	rm -rf _build
 	rm -f *~
+	rm -f "#*"
