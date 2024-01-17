@@ -1,0 +1,4 @@
+(executable
+ (public_name ModuleDiffing)
+ (name main)
+ (libraries ModuleDiffing_lib))

@@ -1,5 +1,5 @@
 module Make(I: Sig.INPUT)(G: Sig.G) = struct
-  let prune (t1: I.t) (t2: I.t) (graph: G.t) : G.t =
+  let prune (_: I.t) (_: I.t) (graph: G.t) : G.t =
     graph
 end
 

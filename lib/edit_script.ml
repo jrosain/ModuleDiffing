@@ -47,15 +47,15 @@ module Make(I: Sig.INPUT) (N: Sig.Node with module Input = I) (G: Sig.G with typ
     let t1_graph = convert_to_ocamlgraph t1 in
     let t2_graph = convert_to_ocamlgraph t2 in
 
-    let _ = G.iter_edges (fun v1 v2 -> 
-      let m_nodes = G.fold_edges (fun v1' v2' acc -> 
+    let _ = G.iter_edges (fun _ v2 -> 
+      let m_nodes = G.fold_edges (fun v1' _ acc -> 
         if (G.mem_vertex t1_ext_graph v1') then
           v1'::acc
         else
           acc
       ) bipartite [] in
 
-      let n_nodes = G.fold_edges (fun v1' v2' acc -> 
+      let n_nodes = G.fold_edges (fun _ v2' acc -> 
         if (G.mem_vertex t2_ext_graph v2') then
           v2'::acc
         else

@@ -1,8 +1,19 @@
+.PHONY: all
 all:
-	ocamlbuild -use-ocamlfind -pkg core -pkg ocamlgraph  main.native
-	ln -f -s main.native diffing
+	dune build
+	ln -f -s _build/default/bin/main.exe diffing
 	chmod +x diffing
 
+.PHONY: fmt
+fmt:
+	dune build @fmt --auto-promote
+
+.PHONY: clean
 clean:
-	ocamlbuild -clean
-	rm -f diffing
+	dune clean
+	rm -f pieuvre
+
+.PHONY: clean
+tests: all
+	dune runtest --force
+

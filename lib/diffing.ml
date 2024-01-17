@@ -45,7 +45,7 @@ module Make(I: Sig.INPUT) = struct
   
   let exec (t1: I.t) (t2: I.t) : patch =
     let graph = create_bipartite t1 t2 in
-    let graph = P.prune t1 t2 graph in
+    let _ = P.prune t1 t2 graph in
     (* Then flows then patch reconstruction *)
     Empty
 end

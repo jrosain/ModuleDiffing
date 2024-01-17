@@ -1,0 +1,3 @@
+(library
+ (name ModuleDiffing_lib)
+ (libraries ocamlgraph))

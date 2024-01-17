@@ -1,0 +1,5 @@
+(tests
+  (names test_diffing)
+  (libraries
+    alcotest
+    ModuleDiffing_lib))
