@@ -8,6 +8,9 @@ module Make(I: Sig.INPUT) = struct
     module Input = I
     
     type t = Original of Input.v | Minus | Plus
+    let mk v = Original v
+    let minus () = Minus
+    let plus () = Plus
     let compare = Stdlib.compare
     let hash = Hashtbl.hash
     let equal = (=)
@@ -23,9 +26,9 @@ module Make(I: Sig.INPUT) = struct
   (* The goal is to create a complete bipartite graph between the nodes : (t1 *)
   (* and insertion) and (t2 and deletion). *)
   let create_bipartite (t1: I.t) (t2: I.t) : G.t =
-    let transform = List.map (fun x -> Node.Original x) in
-    let nodes1 = Node.Plus :: (transform (I.elements t1)) in
-    let nodes2 = Node.Minus :: (transform (I.elements t2)) in
+    let transform = List.map (fun x -> Node.mk x) in
+    let nodes1 = Node.plus() :: (transform (I.elements t1)) in
+    let nodes2 = Node.minus() :: (transform (I.elements t2)) in
     let g = G.create ~size:((List.length nodes1) + (List.length nodes2)) () in
     List.iter (G.add_vertex g) nodes1;
     List.iter (G.add_vertex g) nodes2;

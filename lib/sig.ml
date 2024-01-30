@@ -25,6 +25,9 @@ module type Node = sig
   module Input : INPUT
 
   type t = Original of Input.v | Minus | Plus 
+  val mk : Input.v -> t
+  val minus : unit -> t
+  val plus : unit -> t
   val compare : t -> t -> int
   val equal : t -> t -> bool
   val hash : t -> int

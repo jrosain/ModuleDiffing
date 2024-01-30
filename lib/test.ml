@@ -97,6 +97,5 @@ let launch_test () =
                                                                                                       [])])]) ; Tree.Node(("cd", 63), [Tree.Node(("ad", 64), [])])]) in
   let t1 = Test.create tree1 in
   let t2 = Test.create tree2 in
-
   let _ = Diff.exec t1 t2 in
   ()

@@ -1,5 +1,6 @@
 all:
 	dune build
+	rm -f diffing
 	ln -s _build/main.native diffing
 
 clean:
