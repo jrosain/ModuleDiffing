@@ -93,6 +93,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     match (x, y) with
     | N.Original m, N.Original n ->
           let cu = CostTable.get update_costs x y in
+          (*I.print_v m; print_string " "; I.print_v n; print_string " ";*)
           Cost.lower_bound (cm1 n) (I.children t1 m) (cm2 m) (I.children t2 n) cu
     | N.Plus, N.Minus | N.Minus, N.Plus -> Cost.null
     | N.Plus, _ | _, N.Plus -> Cost.lb_ci()
@@ -218,8 +219,9 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     | N.Original _ ->
        if List.exists
             (fun n ->
-              (not (G.mem_edge graph (N.plus()) n)) ||
-              (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_cd())) <= 0)
+              if n = (N.minus()) then false
+              else (not (G.mem_edge graph (N.plus()) n)) ||
+                     (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_cd())) <= 0)
             (G.succ graph m)
        then G.remove_edge graph (N.minus()) m
        else ()
@@ -231,8 +233,9 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     | N.Original _ ->
        if List.exists
             (fun m ->
-              (not (G.mem_edge graph (N.minus()) m)) ||
-                (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_ci())) <= 0)
+              if m = (N.plus()) then false
+              else (not (G.mem_edge graph (N.minus()) m)) ||
+                     (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_ci())) <= 0)
             (G.succ graph n)
        then G.remove_edge graph (N.plus()) n
        else ()

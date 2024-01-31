@@ -83,10 +83,8 @@ module Diff = Diffing.Make(Test)
 let launch_test () =
   let tree1 = Tree.Node(("a", 1), [Tree.Node(("b", 2), [Tree.Node(("d", 3), [])]) ;
                                    Tree.Node(("e", 4), [Tree.Node(("a", 5), []) ;
-                                                        Tree.Node(("f", 6), []) ;
-                                                        Tree.Node(("cc", 7),
-                                                                  [Tree.Node(("ac", 8),
-                                                                             [])])]) ;
+                                                        Tree.Node(("f", 6), []) ]);
+                                   Tree.Node(("cc", 7),[Tree.Node(("ac", 8),[])]) ;
                                    Tree.Node(("cd", 9), [Tree.Node(("ad", 10), [])])]) in
   let tree2 = Tree.Node(("a", 51), [Tree.Node(("f", 52), [Tree.Node(("b", 53),
                                                                     [Tree.Node(("d", 54), [])])]) ;
@@ -94,7 +92,8 @@ let launch_test () =
                                                           Tree.Node(("f", 57),
                                                                     [Tree.Node(("b", 58), [Tree.Node(("d", 59), [])])])]) ;
                                               Tree.Node(("g", 60), [Tree.Node(("cc", 61), [Tree.Node(("ac", 62),
-                                                                                                      [])])]) ; Tree.Node(("cd", 63), [Tree.Node(("ad", 64), [])])]) in
+                                                                                                      [])])
+  ; Tree.Node(("cd", 63), [Tree.Node(("ad", 64), [])])])]) in
   let t1 = Test.create tree1 in
   let t2 = Test.create tree2 in
   let _ = Diff.exec t1 t2 in

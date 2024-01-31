@@ -8,7 +8,7 @@ let ci = 1
 let cd = 1
 let cc = 2
 let cg = 2
-let cm = 2
+let cm = 1
 let ct = Stdlib.max cm (Stdlib.max cc cg)
 
 let lb_ci () = 2*ci
@@ -31,13 +31,24 @@ let prune_rule_1 (lb: t) (ub1: t) (ub2: t) : bool =
 let prune_rule_2 (lb: t) : bool =
   lb >= 2*(cd + ci)
 
+(* Below are some edge cases that do not appear in the MH-DIFF paper:
+   * If one of the node has no children, then take the cost of the forced moves of the other.
+   * Otherwise, take the minimum.
+   It makes sense as we want an additionnal weigth coming with the link between a node with children
+   and a node without children. *)
 let lower_bound (forced1: 'a -> t) (l1: 'a list) (forced2: 'a -> t) (l2: 'a list) (cu: t)
     : t =
   let ca = List.fold_left (fun s m' -> s + (forced1 m')) 0 l1 in
   let cb = List.fold_left (fun s n' -> s + (forced2 n')) 0 l2 in
-  2*cu + (Stdlib.min ca cb)
+  let co =
+    if (List.length l1) = 0 then cb
+    else if (List.length l2) = 0 then ca
+    else (Stdlib.min ca cb) in
+  (*let _ = Printf.printf "%d %d %d\n" cu co (2*cu + co) in*)
+  2*cu + co
 
 let compare (x: t) (y: t) : int =
   Stdlib.compare x y
 
 let int_to_cost (v: int) : t = v
+
