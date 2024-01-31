@@ -1,3 +1,9 @@
+(* This file implements the pruning phase of the MH-DIFF algorithm described in "Meaningful Change
+   Detection in Structured Data" by Sudarshan S. Chawathe and Hector Garcia-Molina. The paper is 
+   available at: 
+     * https://www.seas.upenn.edu/~zives/03s/cis650/P026.PDF (published version)
+     * http://aturing.umcs.maine.edu/~sudarshan.chawathe/opubs/mhdiff-ext1.pdf (extended version) *)
+
 (* Wrapper around the heap of core_kernel to make it easier to use. *)
 module UpperBoundHeap = struct
   module Heap = Pairing_heap
@@ -50,48 +56,48 @@ module CostTable = struct
   (* Get the value at the given pair in the cost table. *)
   let get (table: 'a t) (x: 'a) (y: 'a) : Cost.t =
     Hashtbl.find table (x, y)
-
-  (* Replacement of the value of the given pair in the cost table. *)
-  (*let replace (table: 'a t) (x: 'a) (y: 'a) (value: Cost.t) : unit =
-    Hashtbl.replace table (x, y) value;
-    Hashtbl.replace table (y, x) value*)
 end
 
-module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type V.t = N.t
-  and type E.label = Cost.t)
-  = struct
+module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type V.t = N.t and type E.label = Cost.t) = struct
   type cost_table = G.V.t CostTable.t      (* Type to store update costs. *)
   type heap = G.V.t UpperBoundHeap.t       (* Type of the heaps. *)
   type ub_table = (G.V.t, heap) Hashtbl.t  (* Type to store the heaps w.r.t. the vertices of G. *)
 
   (* Transformation of a list of I.t in G.V.t. *)
   let transform = List.map (fun x -> N.mk x)
+  let t1_vertices (t1: I.t) = N.plus() :: transform (I.elements t1)
+  let t2_vertices (t2: I.t) = N.minus() :: transform (I.elements t2)
 
   (* A forced move is defined as follows: 
-         C-MF(m', n) = cm if there exists n' in C(n) s.t. m'n' is an edge
-                       0  otherwise (or Cost.null)
-     /!\ This is not the forced move defined in the paper : indeed, in the paper, the forced move is
-         defined as C-MF(m', n) = 0 if there exists n' in C(n) s.t. m'n' is an edge, BUT we think it
-         is a mistake as the conditional cost is defined similarly. Furthermore, it makes more sense
-         to have a cost of cm if there can be a move as the name is "forced move". /!\ *)
-  let forced_move_left (m': I.v) (n: I.v) (other: I.t) (graph: G.t) : Cost.t =
+         C-MF(m', n) = 0  if there exists n' in C(n) s.t. m'n' is an edge
+                       cm otherwise (or Cost.null) *)
+  let forced_move_left (other: I.t) (graph: G.t) (m': I.v) (n: I.v) : Cost.t =
     (* TODO: memoization *)
     let child_has_edge = fun n' -> G.mem_edge graph (N.mk m') (N.mk n') in
-    if List.exists (child_has_edge) (I.children other n) then Cost.cm
-    else Cost.null
+    if List.exists (child_has_edge) (I.children other n) then Cost.null
+    else Cost.cm
 
-  let fun_forced_move_left (other: I.t) (graph: G.t) : I.v -> I.v -> Cost.t =
-    fun m' n -> forced_move_left m' n other graph
-
-  let forced_move_right (m: I.v) (n': I.v) (other: I.t) (graph: G.t) : Cost.t =
+  let forced_move_right (other: I.t) (graph: G.t) (m: I.v) (n': I.v) : Cost.t =
     (* TODO: memoization *)
     let child_has_edge = fun m' -> G.mem_edge graph (N.mk m') (N.mk n') in
-    if List.exists (child_has_edge) (I.children other m) then Cost.cm
-    else Cost.null
+    if List.exists (child_has_edge) (I.children other m) then Cost.null
+    else Cost.cm
 
-  let fun_forced_move_right (other: I.t) (graph: G.t) : I.v -> I.v -> Cost.t =
-    fun m n' -> forced_move_right m n' other graph
-        
+  (* Computation of the lower-bound. 
+     We should be assured that x is in V(T1) U { + } and that y is in V(T2) U { - }.
+     It is a bit different from the one in the paper --- we add the cases V(T1), - and V(T2), +. *)
+  let lower_bound (update_costs : cost_table) (graph: G.t) (t1: I.t) (t2: I.t) (x: G.V.t)
+        (y: G.V.t)  : Cost.t =
+    let cm1 = forced_move_left t2 graph in
+    let cm2 = forced_move_right t1 graph in
+    match (x, y) with
+    | N.Original m, N.Original n ->
+          let cu = CostTable.get update_costs x y in
+          Cost.lower_bound (cm1 n) (I.children t1 m) (cm2 m) (I.children t2 n) cu
+    | N.Plus, N.Minus | N.Minus, N.Plus -> Cost.null
+    | N.Plus, _ | _, N.Plus -> Cost.lb_ci()
+    | N.Minus, _ | _, N.Minus -> Cost.lb_cd()
+
   (* Computation of all the update costs. It is done only once and stored as-is as
      computing it every time that is needed might be costly. *)
   let compute_update_costs (t1: I.t) (t2: I.t) (n: int) : cost_table =
@@ -107,21 +113,22 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
         (graph: G.t) : Cost.t =
     match (x, y) with
     | N.Plus, N.Minus -> Cost.null
-    | N.Plus, _ | _, N.Plus -> Cost.ci
-    | _, N.Minus | N.Minus, _ -> Cost.cd
+    | N.Plus, _ | _, N.Plus -> Cost.ub_ci()
+    | _, N.Minus | N.Minus, _ -> Cost.ub_cd()
     | N.Original m, N.Original n ->
-       (* Get the children of m in its tree & the children of n in its tree as nodes of the graph. *)
+       (* Get the children of m in its tree & the children of n in its tree. *)
        let c1 = (I.children t1 m) in
        let c2 = (I.children t2 n) in  
-       (* Get the update cost of the vertices. *)
+       (* Get the update cost between the vertices. *)
        let cw = CostTable.get update_costs x y in
-       (* The conditional move is the forced move, reversed: it should cost 0 if there exists n' in 
+       (* The conditional move is the forced move, reversed: it should cost cm if there exists n' in 
           C(n) s.t. m'n' is an edge (where m' is in C(m)).
-          It is exactly as defined in the paper (whereas forced move is inversed).
-          Then, given the forced move, f_conditional_move returns the function that computes it when
-          given two vertices. *)
-       let cm1 = Cost.f_conditional_move (fun_forced_move_left t2 graph) in
-       let cm2 = Cost.f_conditional_move (fun_forced_move_right t1 graph) in
+          /!\ This is not the conditional move defined in the paper : indeed, in the paper, the 
+          conditional move is defined as C-MF(m', n) = 0 if there exists n' in C(n) s.t. m'n' is an
+          edge, BUT we think it is a mistake as the forced cost is defined similarly. Furthermore,
+          it indeed makes the upper-bound decrease & lower-bound increase. *)
+       let cm1 = Cost.f_conditional_move (forced_move_left t2 graph) in
+       let cm2 = Cost.f_conditional_move (forced_move_right t1 graph) in
        (* Computing the upper bound cost needs the total number of edges of a vertex. *)
        let out_deg = fun m -> G.out_degree graph (N.mk m) in
        Cost.upper_bound out_deg c1 c2 cm1 cm2 cw m n
@@ -147,24 +154,9 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     let iterate =
       (fun reverse v -> let succ = G.succ graph v in
                         Hashtbl.add table v (init_min_heap v succ update_costs t1 t2 graph reverse)) in
-    List.iter (iterate false) (N.plus() :: (transform (I.elements t1)));
-    List.iter (iterate true) (N.minus() :: (transform (I.elements t2)));
+    List.iter (iterate false) (t1_vertices t1);
+    List.iter (iterate true) (t2_vertices t2);
     (table)
-
-  (* Computation of the lower-bound. 
-     We should be assured that x is in V(T1) U { + } and that y is in V(T2) U { - }.
-     It is a bit different from the one in the paper --- we add the cases V(T1), - and V(T2), +. *)
-  let compute_lower_bound (x: G.V.t) (y: G.V.t) (update_costs : cost_table) (graph: G.t)
-        (t1: I.t) (t2: I.t) : Cost.t =
-    let cm1 = fun_forced_move_left t2 graph in
-    let cm2 = fun_forced_move_right t1 graph in
-    match (x, y) with
-    | N.Original m, N.Original n ->
-          let cu = CostTable.get update_costs x y in
-          Cost.lower_bound (cm1 n) (I.children t1 m) (cm2 m) (I.children t2 n) cu
-    | N.Plus, N.Minus | N.Minus, N.Plus -> Cost.null
-    | N.Plus, _ | _, N.Plus -> Cost.ci
-    | N.Minus, _ | _, N.Minus -> Cost.cd
 
   (* Removal of the edge [mn] in the graph and in the min-heaps of [m] and [n]. *)
   let remove_edge (m: G.V.t) (n: G.V.t) (ub_table: ub_table) (graph: G.t) : unit =
@@ -172,7 +164,8 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     let n_heap = Hashtbl.find ub_table n in
     UpperBoundHeap.remove m_heap n;
     UpperBoundHeap.remove n_heap m;
-    G.remove_edge graph m n; ()
+    G.remove_edge graph m n;
+    ()
          
   (* First pruning rule. *)
   let is_prunable_1 (m: G.V.t) (n: G.V.t) (lb: Cost.t) (ub_table: ub_table) : bool =
@@ -188,7 +181,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
         (t1: I.t) (t2: I.t) (graph: G.t) : bool =
     if (not (G.mem_edge graph m n)) then false
     else
-      let lb_cost = compute_lower_bound m n update_costs graph t1 t2 in
+      let lb_cost = lower_bound update_costs graph t1 t2 m n in
       if ((is_prunable_1 m n lb_cost ub_table) || (is_prunable_2 lb_cost)) then
         (remove_edge m n ub_table graph; true)
       else false
@@ -208,27 +201,59 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
 
   (* Creates a graph that has the right labels on each edge. *)
   let update_labels (t1: I.t) (t2: I.t) (graph: G.t) (update_costs: cost_table) : G.t =
-    let t1_vertices = (transform (I.elements t1)) in
-    let t2_vertices = (transform (I.elements t2)) in
-    let g = G.create ~size:((List.length t1_vertices) + (List.length t2_vertices) + 2) () in
+    let mk_edge = fun m n -> G.E.create m (lower_bound update_costs graph t1 t2 m n) n in
+    let x = t1_vertices t1 in
+    let y = t2_vertices t2 in
+    let g = G.create ~size:((List.length x) + (List.length y) + 2) () in
+    List.iter (G.add_vertex g) x;
+    List.iter (G.add_vertex g) y;
     List.iter
-      (fun m ->
-        List.iter
-          (fun n ->
-            if G.mem_edge graph m n then
-              let lower_bound_cost = compute_lower_bound m n update_costs graph t1 t2 in
-              let edge = G.E.create m (lower_bound_cost) n in
-              G.add_edge_e g edge)
-       (N.Minus :: t2_vertices))
-      (N.Plus :: t1_vertices);
+      (fun m -> (List.iter (fun n -> if G.mem_edge graph m n then G.add_edge_e g (mk_edge m n)) y))
+      x;
     (g)
   
-  let rec prune (t1: I.t) (t2: I.t) (graph: G.t) : G.t =
+  let try_remove_edge_left (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (m: G.V.t) : unit =
+    match m with
+    | N.Plus -> ()
+    | N.Original _ ->
+       if List.exists
+            (fun n ->
+              (not (G.mem_edge graph (N.plus()) n)) ||
+              (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_cd())) <= 0)
+            (G.succ graph m)
+       then G.remove_edge graph (N.minus()) m
+       else ()
+    | _ -> failwith "Minus node cannot link with itself"
+
+  let try_remove_edge_right (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (n: G.V.t) : unit =
+    match n with
+    | N.Minus -> ()
+    | N.Original _ ->
+       if List.exists
+            (fun m ->
+              (not (G.mem_edge graph (N.minus()) m)) ||
+                (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_ci())) <= 0)
+            (G.succ graph n)
+       then G.remove_edge graph (N.plus()) n
+       else ()
+    | _ -> failwith "Plus node cannot link with itself"
+
+  (* Remove the edges to (+) and (-) if there exists a lower bound that is better than deletion+insertion. *)
+  let prune_useless_plus_minus (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) : G.t =
+    List.iter (try_remove_edge_left graph t1 t2 update) (G.succ graph (N.minus()));
+    List.iter (try_remove_edge_right graph t1 t2 update) (G.succ graph (N.plus()));
+    List.iter (try_remove_edge_left graph t1 t2 update) (G.succ graph (N.minus()));
+    graph
+
+  (* Main function of pruning. *)
+  let prune (t1: I.t) (t2: I.t) (graph: G.t) : G.t =
     let update_costs = compute_update_costs t1 t2 (G.nb_edges graph) in
-    let upper_bound_costs = init_upper_bounds t1 t2 graph update_costs in
-    let pruned = run_pruning t1 t2 graph update_costs upper_bound_costs in
-    (*remove_plus_minus_useless_edges update_costs t1 t2 graph;*)
-    let graph' = update_labels t1 t2 graph update_costs in
-    if pruned then prune t1 t2 graph'
-    else graph'
+    let rec aux (graph: G.t) =
+      (* TODO: memoize this? *)
+      let upper_bound_costs = init_upper_bounds t1 t2 graph update_costs in
+      let pruned = run_pruning t1 t2 graph update_costs upper_bound_costs in
+      let graph' = update_labels t1 t2 graph update_costs in
+      if pruned then aux graph'
+      else graph'
+    in prune_useless_plus_minus (aux graph) t1 t2 update_costs
 end

@@ -30,6 +30,12 @@ val cg : t
 (** The cost of the movement of a subtree in the AST. *)
 val cm : t
 
+(* The costs of insertion / deletion for the lower-bound and upper-bound computations. *)
+val lb_ci : unit -> t
+val lb_cd : unit -> t
+val ub_ci : unit -> t
+val ub_cd : unit -> t
+
 (** Returns a function that computes the conditional move of a given edge using a
     function that computes the forced move of this very edge. *)
 val f_conditional_move : ('a -> 'a -> t) -> ('a -> 'a -> t)
@@ -52,9 +58,6 @@ val prune_rule_1 : t -> t -> t -> bool
 
 (** Returns true when the lower-bound is greater than an insertion and a deletion. *)
 val prune_rule_2 : t -> bool
-
-(** Returns true when the lower-bound is lower than the cost of the insertion/deletion. *)
-val prune_rule_3 : t -> t -> bool
 
 (** Compares two costs. *)
 val compare : t -> t -> int

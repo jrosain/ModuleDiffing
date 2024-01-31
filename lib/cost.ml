@@ -8,11 +8,16 @@ let ci = 1
 let cd = 1
 let cc = 2
 let cg = 2
-let cm = 1
+let cm = 2
 let ct = Stdlib.max cm (Stdlib.max cc cg)
 
+let lb_ci () = 2*ci
+let lb_cd () = 2*cd
+let ub_ci () = 2*ci
+let ub_cd () = 2*cd
+
 let f_conditional_move (f: 'a -> 'a -> t) : ('a -> 'a -> t) =
-  fun x y -> let forced_move_cost = f x y in cm - forced_move_cost
+  fun x y -> cm - (f x y)
 
 let upper_bound (out: 'a -> int) (children1: 'a list) (children2: 'a list) (cond_moves1: 'a -> 'a -> t)
       (cond_moves2: 'a -> 'a -> t) (cw: t) (m: 'a) (n: 'a) : t =
@@ -26,14 +31,11 @@ let prune_rule_1 (lb: t) (ub1: t) (ub2: t) : bool =
 let prune_rule_2 (lb: t) : bool =
   lb >= 2*(cd + ci)
 
-let prune_rule_3 (lb: t) (ciocd: t) : bool =
-  lb < 2*ciocd
-
 let lower_bound (forced1: 'a -> t) (l1: 'a list) (forced2: 'a -> t) (l2: 'a list) (cu: t)
     : t =
   let ca = List.fold_left (fun s m' -> s + (forced1 m')) 0 l1 in
   let cb = List.fold_left (fun s n' -> s + (forced2 n')) 0 l2 in
-  2*cu + (Stdlib.min ca  cb)
+  2*cu + (Stdlib.min ca cb)
 
 let compare (x: t) (y: t) : int =
   Stdlib.compare x y

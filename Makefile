@@ -1,7 +1,7 @@
 all:
 	dune build
 	rm -f diffing
-	ln -s _build/main.native diffing
+	ln -s _build/default/bin/main.exe diffing
 
 clean:
 	rm -f diffing
