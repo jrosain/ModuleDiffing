@@ -52,3 +52,4 @@ let compare (x: t) (y: t) : int =
 
 let int_to_cost (v: int) : t = v
 
+let cost_to_int (v: t) : int = v

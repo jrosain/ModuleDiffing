@@ -3,4 +3,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
                                                                        and type E.label = Cost.t)
        : sig
   val prune : I.t -> I.t -> G.t -> G.t
+
+  (* -*-*-*-*-*-PRIVATE FUNCTIONS: DO NOT CALL-*-*-*-*-*-PRIVATE FUNCTIONS: DO NOT CALL-*-*-*-*-**-*)
+  val forced_move_left : I.t -> G.t -> I.v -> I.v -> Cost.t
 end

@@ -64,3 +64,5 @@ val compare : t -> t -> int
 
 val int_to_cost : int -> t
 (* The update cost is given by the data-structure. *)
+
+val cost_to_int : t -> int
