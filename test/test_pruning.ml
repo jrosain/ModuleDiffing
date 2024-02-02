@@ -161,3 +161,4 @@ let () =
         (*test_case "" `Quick test_forced_move_right;*)
       ];
     ]
+

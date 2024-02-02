@@ -9,6 +9,11 @@ clean:
 	rm -f *~
 	rm -f "#*"
 
+install:
+	opam update
+	opam install --yes . --deps-only
+	eval $$(opam env)
+
 coverage:
 	make clean
 	BISECT_ENABLE=yes dune build
