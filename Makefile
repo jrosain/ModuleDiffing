@@ -8,3 +8,10 @@ clean:
 	rm -rf _build
 	rm -f *~
 	rm -f "#*"
+
+coverage:
+	make clean
+	BISECT_ENABLE=yes dune build
+	dune runtest
+	bisect-ppx-report html
+	bisect-ppx-report summary

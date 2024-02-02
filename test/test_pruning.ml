@@ -111,10 +111,10 @@ let create_bipartite (t1: Test.t) (t2: Test.t) : G.t =
 module P = Pruning.Make(Test)(Node)(G)
 (* Setup end. *)
 
-let test_forced_move_left () =
+let trivial_example () =
   let open BinaryTree in
-  let tree1 = Node (Node (Leaf, 1, Leaf), 2, Node (Leaf, 3, Leaf)) in
-  let tree2 = Node (Node (Leaf, 6, Leaf), 7, Node (Leaf, 8, Leaf)) in
+  let tree1 = Node (Node (Leaf, 2, Leaf), 1, Node (Leaf, 3, Leaf)) in
+  let tree2 = Node (Node (Leaf, 7, Leaf), 6, Node (Leaf, 8, Leaf)) in
   let labels1 = function
     | 1 -> "a"
     | 2 -> "d"
@@ -130,13 +130,34 @@ let test_forced_move_left () =
   let test1 = Test.create (labels1, tree1) in
   let test2 = Test.create (labels2, tree2) in
   let graph = create_bipartite test1 test2 in
-  let fleft1 = P.forced_move_left test2 graph 1 6 in
-  Alcotest.(check int) "forced move cost on full bipartite should be null" 0 (Cost.cost_to_int fleft1)
+  test1, test2, graph
+
+
+let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.cost_to_int c)
+let cost_equal (ca: Cost.t) (cb: Cost.t) : bool = ((Cost.compare ca cb) = 0)
+let cost_t = Alcotest.testable cost_pp cost_equal
+
+let test_trivial_root_forced_move_left () =
+  let test1, test2, graph = trivial_example() in
+  List.iter
+    (fun v ->
+      let fcost = P.forced_move_left test2 graph v 6 in
+      Alcotest.(check cost_t) "forced move cost on non-leaf in full bipartite should be null"
+        (Cost.null) (fcost)) (Test.children test1 1)
+
+let test_trivial_non_root_forced_move_left () =
+  let test1, test2, graph = trivial_example() in
+  List.iter
+    (fun v ->
+      let fcost = P.forced_move_left test2 graph v 7 in
+      Alcotest.(check cost_t) "forced move cost on leaf in full bipartite should be Cost.cm"
+        (Cost.cm) (fcost)) (Test.children test1 1)
 
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
-        test_case "trivial_move_left" `Quick test_forced_move_left;
+        test_case "trivial_root_forced_move_left" `Quick test_trivial_root_forced_move_left;
+        test_case "trivial_non_root_forced_move_left" `Quick test_trivial_non_root_forced_move_left;
         (*test_case "" `Quick test_forced_move_right;*)
       ];
     ]
