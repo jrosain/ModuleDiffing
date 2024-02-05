@@ -55,7 +55,9 @@ module CostTable = struct
 
   (* Get the value at the given pair in the cost table. *)
   let get (table: 'a t) (x: 'a) (y: 'a) : Cost.t =
-    Hashtbl.find table (x, y)
+    try
+      Hashtbl.find table (x, y)
+    with Not_found -> failwith "internal error"
 end
 
 module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type V.t = N.t and type E.label = Cost.t) = struct
@@ -93,16 +95,16 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     match (x, y) with
     | N.Original m, N.Original n ->
           let cu = CostTable.get update_costs x y in
-          (*I.print_v m; print_string " "; I.print_v n; print_string " ";*)
           Cost.lower_bound (cm1 n) (I.children t1 m) (cm2 m) (I.children t2 n) cu
-    | N.Plus, N.Minus | N.Minus, N.Plus -> Cost.null
-    | N.Plus, _ | _, N.Plus -> Cost.lb_ci()
-    | N.Minus, _ | _, N.Minus -> Cost.lb_cd()
+    | _, N.Plus | N.Minus, _ -> failwith "internal error"
+    | N.Plus, N.Minus -> Cost.null
+    | N.Plus, _  -> Cost.lb_ci()
+    | _, N.Minus -> Cost.lb_cd()
 
   (* Computation of all the update costs. It is done only once and stored as-is as
      computing it every time that is needed might be costly. *)
-  let compute_update_costs (t1: I.t) (t2: I.t) (n: int) : cost_table =
-    let table = CostTable.create n in
+  let compute_update_costs (t1: I.t) (t2: I.t) (size: int) : cost_table =
+    let table = CostTable.create size in
     let add = fun x y c -> CostTable.add table (N.mk x) (N.mk y) c in
     List.iter
       (fun m -> List.iter (fun n -> add m n (I.compare t1 m n)) (I.elements t2))

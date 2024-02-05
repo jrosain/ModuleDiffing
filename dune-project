@@ -19,7 +19,7 @@
  (name ModuleDiffing)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune ocamlgraph core_kernel alcotest bisect_ppx)
  (tags
   (topics "to describe" your project)))
 

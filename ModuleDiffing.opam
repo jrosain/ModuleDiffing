@@ -12,6 +12,10 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.10"}
+  "ocamlgraph"
+  "core_kernel"
+  "alcotest"
+  "bisect_ppx"
   "odoc" {with-doc}
 ]
 build: [

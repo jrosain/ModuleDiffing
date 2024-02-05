@@ -137,6 +137,9 @@ let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.cost_to_int c)
 let cost_equal (ca: Cost.t) (cb: Cost.t) : bool = ((Cost.compare ca cb) = 0)
 let cost_t = Alcotest.testable cost_pp cost_equal
 
+(* ---------------------------------------------------------------------------------------------- *)
+(* FORCED MOVES *)
+
 (* The cost of the forced move between the two roots should be null on a full bipartite.  *)
 let test_trivial_root_forced_move_left () =
   let test1, test2, graph = trivial_example() in
@@ -194,21 +197,165 @@ let test_remove_edges_forced_move_left () =
   Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
                            between their children" (Cost.cm) (fcost);
   let fcost = P.forced_move_left test2 graph 3 6 in
-  Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
+  Alcotest.(check cost_t) "forced move cost on roots should be null when not all edges are removed
                            between their children" (Cost.null) (fcost);
   G.remove_edge graph (Node.mk 3) (Node.mk 8);
   test
     (Cost.cm)
     "forced move cost on roots should be not null when all edges are removed between their children"
 
+(* Same but for forced_move_right *)
+let test_remove_edges_forced_move_right () =
+  let test1, test2, graph = trivial_example() in
+  let test expect message = 
+    List.iter
+      (fun v -> 
+        let fcost = P.forced_move_right test1 graph 1 v in
+        Alcotest.(check cost_t) message (expect) (fcost))
+      (Test.children test2 6)
+  in
+  List.iter
+    (fun (a, b) ->
+      G.remove_edge graph (Node.mk a) (Node.mk b);
+      test (Cost.null)
+        "forced move cost on roots should be null when not all edges are removed between their children")
+    [(2, 7) ; (2, 8)];
+  G.remove_edge graph (Node.mk 3) (Node.mk 7);
+  (* Should be cm, 0 *)
+  let fcost = P.forced_move_right test1 graph 1 7 in
+  Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
+                           between their children" (Cost.cm) (fcost);
+  let fcost = P.forced_move_right test1 graph 1 8 in
+  Alcotest.(check cost_t) "forced move cost on roots should be null when an edge exists
+                           between their children" (Cost.null) (fcost);
+  G.remove_edge graph (Node.mk 3) (Node.mk 8);
+  test
+    (Cost.cm)
+    "forced move cost on roots should be not null when all edges are removed between their children"
+
+(* ---------------------------------------------------------------------------------------------- *)
+(* UPDATE COST *)
+
+(* Test if it is properly stored, i.e., if any pair (u, v) with u in T1 or in T2 and v in T2 or in *)
+(* T1 has its cost stored in the table.*)
+let test_record_of_update_cost () =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let is_expected_cost a b v = 
+    Alcotest.(check cost_t)
+      "recorded cost should be computed cost"
+      (Pruning.CostTable.get costs (Node.mk a) (Node.mk b)) v;
+    Alcotest.(check cost_t)
+      "recorded cost should be computed cost"
+      (Pruning.CostTable.get costs (Node.mk b) (Node.mk a)) v in
+  List.iter
+    (fun m -> List.iter (fun n -> is_expected_cost m n (Test.compare test1 m n)) (Test.elements test2))
+    (Test.elements test1)
+
+(* Test if, given a non-edge, it fails. *)
+let test_fail_on_non_edge () =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  Alcotest.check_raises
+    "cost table should fail if non-edge is given"
+    (Failure("internal error"))
+    (fun () -> let _ = Pruning.CostTable.get costs (Node.mk 1) (Node.mk 1) in ())
+
+(* ---------------------------------------------------------------------------------------------- *)
+(* LOWER BOUND COMPUTATION *)
+
+let test_lower_bound_impossible_pm_combinations() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let failure_test msg n m =
+    Alcotest.check_raises
+      msg
+      (Failure("internal error"))
+      (fun () -> let _ = P.lower_bound costs graph test1 test2 n m in ()) in
+  failure_test "plus should not be given as the second argument" (Node.mk 1) (Node.plus());
+  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk 6);
+  failure_test "plus/minus should be given as the first/second argument" (Node.minus()) (Node.plus())
+
+let test_plus_lower_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_plus v =
+    Alcotest.(check cost_t)
+      "a link to the 'plus' node should have the weight of the insertion"
+      (Cost.lb_ci())
+      (P.lower_bound costs graph test1 test2 (Node.plus()) (Node.mk v)) in
+  List.iter (test_plus) (Test.elements test2)
+
+let test_minus_lower_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_minus v =
+    Alcotest.(check cost_t)
+      "a link to the 'plus' node should have the weight of the insertion"
+      (Cost.lb_cd())
+      (P.lower_bound costs graph test1 test2 (Node.mk v) (Node.minus())) in
+  List.iter (test_minus) (Test.elements test1)
+
+let test_plus_minus_lower_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  Alcotest.(check cost_t)
+    "a link between 'plus' and 'minus' node should have a null weight"
+    (Cost.null)
+    (P.lower_bound costs graph test1 test2 (Node.plus()) (Node.minus()))
+
+let update_cost f c =
+  Cost.int_to_cost (f (Cost.cost_to_int c))
+
+(* The lower-bound between the roots should be the update cost when no edge is removed. *)
+let test_roots_full_bipartite_lower_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  Alcotest.(check cost_t)
+    "the lower-bound between non-leaves in a full bipartite graph should be their update cost."
+    (update_cost (fun i -> 2*i) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6))
+
+(* The lower-bound between two leaves should always be the update cost. *)
+let test_leaves_lower_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_costs () =
+    List.iter
+      (fun m -> List.iter
+       (fun n ->
+         Alcotest.(check cost_t)
+           "the lower-bound between leaves in a full bipartite graph should always be their update cost."
+           (update_cost (fun i -> 2*i) (Pruning.CostTable.get costs (Node.mk m) (Node.mk n)))
+           (P.lower_bound costs graph test1 test2 (Node.mk m) (Node.mk n)))
+       [7 ; 8]
+      )
+      [2 ; 3] in
+  test_costs();
+  List.iter (fun (a, b) -> G.remove_edge graph (Node.mk a) (Node.mk b); test_costs())
+    [(1, 6) ; (1, 7) ; (1, 8) ; (2, 6) ; (2, 7) ; (2, 8) ; (3, 6) ; (3, 7) ; (3, 8)]
+
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
-        test_case "trivial_root_forced_move_left" `Quick test_trivial_root_forced_move_left;
-        test_case "trivial_non_root_forced_move_left" `Quick test_trivial_non_root_forced_move_left;
-        test_case "trivial_root_forced_move_right" `Quick test_trivial_root_forced_move_right;
-        test_case "trivial_non_root_forced_move_right" `Quick test_trivial_non_root_forced_move_right;
-        test_case "test_remove_edges_forced_move_left" `Quick test_remove_edges_forced_move_left;
+        test_case "trivial_root_move_left" `Quick test_trivial_root_forced_move_left;
+        test_case "trivial_non_root_move_left" `Quick test_trivial_non_root_forced_move_left;
+        test_case "trivial_root_move_right" `Quick test_trivial_root_forced_move_right;
+        test_case "trivial_non_root_move_right" `Quick test_trivial_non_root_forced_move_right;
+        test_case "remove_edges_move_left" `Quick test_remove_edges_forced_move_left;
+        test_case "remove_edges_move_right" `Quick test_remove_edges_forced_move_right;
+      ];
+      "update-costs", [
+        test_case "record_update_costs" `Quick test_record_of_update_cost;
+        test_case "fail_on_non_edge" `Quick test_fail_on_non_edge;
+      ];
+      "lower-bound", [
+        test_case "plus_minus_combinations_that_should_fail" `Quick test_lower_bound_impossible_pm_combinations;
+        test_case "edge_to_plus_should_have_ci_lb" `Quick test_plus_lower_bound;
+        test_case "edge_to_minus_should_have_cd_lb" `Quick test_minus_lower_bound;
+        test_case "edge_plus_minus_should_have_null_cost" `Quick test_plus_minus_lower_bound;
+        test_case "edge_between_nonleaves_should_be_update_cost" `Quick test_roots_full_bipartite_lower_bound;
+        test_case "leaves_lower_bound" `Quick test_leaves_lower_bound;
       ];
     ]
 
