@@ -14,9 +14,11 @@ install:
 	opam install --yes . --deps-only
 	eval $$(opam env)
 
-coverage:
+build-cov:
 	make clean
 	BISECT_ENABLE=yes dune build
+
+coverage: build-cov
 	dune runtest
 	bisect-ppx-report html
 	bisect-ppx-report summary

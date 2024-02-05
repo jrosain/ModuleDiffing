@@ -6,4 +6,5 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
 
   (* -*-*-*-*-*-PRIVATE FUNCTIONS: DO NOT CALL-*-*-*-*-*-PRIVATE FUNCTIONS: DO NOT CALL-*-*-*-*-**-*)
   val forced_move_left : I.t -> G.t -> I.v -> I.v -> Cost.t
+  val forced_move_right : I.t -> G.t -> I.v -> I.v -> Cost.t
 end

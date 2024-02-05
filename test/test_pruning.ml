@@ -137,6 +137,7 @@ let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.cost_to_int c)
 let cost_equal (ca: Cost.t) (cb: Cost.t) : bool = ((Cost.compare ca cb) = 0)
 let cost_t = Alcotest.testable cost_pp cost_equal
 
+(* The cost of the forced move between the two roots should be null on a full bipartite.  *)
 let test_trivial_root_forced_move_left () =
   let test1, test2, graph = trivial_example() in
   List.iter
@@ -145,6 +146,7 @@ let test_trivial_root_forced_move_left () =
       Alcotest.(check cost_t) "forced move cost on non-leaf in full bipartite should be null"
         (Cost.null) (fcost)) (Test.children test1 1)
 
+(* The cost of the forced move between a root and a leaf should be non-null on a full bipartite.  *)
 let test_trivial_non_root_forced_move_left () =
   let test1, test2, graph = trivial_example() in
   List.iter
@@ -153,12 +155,60 @@ let test_trivial_non_root_forced_move_left () =
       Alcotest.(check cost_t) "forced move cost on leaf in full bipartite should be Cost.cm"
         (Cost.cm) (fcost)) (Test.children test1 1)
 
+(* Symmetric test. *)
+let test_trivial_root_forced_move_right () =
+  let test1, test2, graph = trivial_example() in
+  List.iter
+    (fun v ->
+      let fcost = P.forced_move_right test1 graph 1 v in
+      Alcotest.(check cost_t) "forced move cost on non-leaf in full bipartite should be null"
+        (Cost.null) (fcost)) (Test.children test2 6)
+
+let test_trivial_non_root_forced_move_right () =
+  let test1, test2, graph = trivial_example() in
+  List.iter
+    (fun v ->
+      let fcost = P.forced_move_right test1 graph 2 v in
+      Alcotest.(check cost_t) "forced move cost on leaf in full bipartite should be Cost.cm"
+        (Cost.cm) (fcost)) (Test.children test2 6)
+
+(* What happens if we remove one edge ? Two edges ? All the edges ? *)
+let test_remove_edges_forced_move_left () =
+  let test1, test2, graph = trivial_example() in
+  let test expect message = 
+    List.iter
+      (fun v -> 
+        let fcost = P.forced_move_left test2 graph v 6 in
+        Alcotest.(check cost_t) message (expect) (fcost))
+      (Test.children test1 1)
+  in
+  List.iter
+    (fun (a, b) ->
+      G.remove_edge graph (Node.mk a) (Node.mk b);
+      test (Cost.null)
+        "forced move cost on roots should be null when not all edges are removed between their children")
+    [(2, 7) ; (3, 7)];
+  G.remove_edge graph (Node.mk 2) (Node.mk 8);
+  (* Should be cm, 0 *)
+  let fcost = P.forced_move_left test2 graph 2 6 in
+  Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
+                           between their children" (Cost.cm) (fcost);
+  let fcost = P.forced_move_left test2 graph 3 6 in
+  Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
+                           between their children" (Cost.null) (fcost);
+  G.remove_edge graph (Node.mk 3) (Node.mk 8);
+  test
+    (Cost.cm)
+    "forced move cost on roots should be not null when all edges are removed between their children"
+
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
         test_case "trivial_root_forced_move_left" `Quick test_trivial_root_forced_move_left;
         test_case "trivial_non_root_forced_move_left" `Quick test_trivial_non_root_forced_move_left;
-        (*test_case "" `Quick test_forced_move_right;*)
+        test_case "trivial_root_forced_move_right" `Quick test_trivial_root_forced_move_right;
+        test_case "trivial_non_root_forced_move_right" `Quick test_trivial_non_root_forced_move_right;
+        test_case "test_remove_edges_forced_move_left" `Quick test_remove_edges_forced_move_left;
       ];
     ]
 
