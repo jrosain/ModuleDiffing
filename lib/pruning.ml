@@ -115,9 +115,10 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
   let compute_upper_bound (x: G.V.t) (y: G.V.t) (update_costs: cost_table) (t1: I.t) (t2: I.t)
         (graph: G.t) : Cost.t =
     match (x, y) with
+    | _, N.Plus | N.Minus, _ -> failwith "internal error"
     | N.Plus, N.Minus -> Cost.null
-    | N.Plus, _ | _, N.Plus -> Cost.ub_ci()
-    | _, N.Minus | N.Minus, _ -> Cost.ub_cd()
+    | N.Plus, _ -> Cost.ub_ci()
+    | _, N.Minus -> Cost.ub_cd()
     | N.Original m, N.Original n ->
        (* Get the children of m in its tree & the children of n in its tree. *)
        let c1 = (I.children t1 m) in

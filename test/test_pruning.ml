@@ -386,6 +386,61 @@ let test_children_no_children_lb_cost() =
        (Pruning.CostTable.get costs (Node.mk 2) (Node.mk 6)))
     (fcost)
 
+(* ---------------------------------------------------------------------------------------------- *)
+(* UPPER BOUND COMPUTATION *)
+
+let test_plus_minus_cancel_each_other_ub() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ucost = P.compute_upper_bound (Node.plus()) (Node.minus()) costs test1 test2 graph in
+  Alcotest.(check cost_t)
+    "The upper-bound cost between plus and minus node should be null."
+    (Cost.null)
+    (ucost)
+
+let test_ub_plus_minus_combinations_that_should_fail() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let failure_test msg n m =
+    Alcotest.check_raises
+      msg
+      (Failure("internal error"))
+      (fun () -> let _ = P.compute_upper_bound n m costs test1 test2 graph in ()) in
+  failure_test "plus should not be given as the second argument" (Node.mk 1) (Node.plus());
+  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk 6);
+  failure_test "plus/minus should be given as the first/second argument" (Node.minus()) (Node.plus())  
+
+let test_plus_upper_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_plus v =
+    Alcotest.(check cost_t)
+      "a link to the 'plus' node should have the weight of the insertion"
+      (Cost.ub_ci())
+      (P.compute_upper_bound (Node.plus()) (Node.mk v) costs test1 test2 graph) in
+  List.iter (test_plus) (Test.elements test2)
+
+let test_minus_upper_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_minus v =
+    Alcotest.(check cost_t)
+      "a link to the 'minus' node should have the weight of the deletion"
+      (Cost.ub_cd())
+      (P.compute_upper_bound (Node.mk v) (Node.minus()) costs test1 test2 graph) in
+  List.iter (test_minus) (Test.elements test1)
+
+let test_nonleaves_no_removal_upper_bound() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ucost = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  Alcotest.(check cost_t)
+    "The upper-bound cost between nodes that have all their children linked should be the
+     maximum upper-bound"
+    (update_cost (fun c -> 2*c + 4*(3*(Cost.cost_to_int Cost.cc) + (Cost.cost_to_int Cost.cm)))
+       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (ucost)  
+
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
@@ -410,6 +465,13 @@ let () =
         test_case "removal_of_children_edges_adds_cost" `Quick test_removal_of_children_edges;
         test_case "removal_of_all_children_set_max_cost" `Quick test_no_edges_means_maximum_lb_cost;
         test_case "cost_between_internal_node_and_leaf" `Quick test_children_no_children_lb_cost;
+      ];
+      "upper-bound", [
+        test_case "plus_minus_cancel_each_other_ub" `Quick test_plus_minus_cancel_each_other_ub;
+        test_case "plus_minus_combinations_that_fail" `Quick test_ub_plus_minus_combinations_that_should_fail;
+        test_case "plus_upper_bound" `Quick test_plus_upper_bound;
+        test_case "minus_upper_bound" `Quick test_minus_upper_bound;
+        test_case "nonleaves_no_removal" `Quick test_nonleaves_no_removal_upper_bound;
       ];
     ]
 

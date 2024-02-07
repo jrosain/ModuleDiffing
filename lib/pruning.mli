@@ -17,4 +17,5 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
   val forced_move_right : I.t -> G.t -> I.v -> I.v -> Cost.t
   val lower_bound : G.V.t CostTable.t -> G.t -> I.t -> I.t -> G.V.t -> G.V.t -> Cost.t
   val compute_update_costs : I.t -> I.t -> int -> G.V.t CostTable.t 
+  val compute_upper_bound : G.V.t -> G.V.t -> G.V.t CostTable.t -> I.t -> I.t -> G.t -> Cost.t
 end

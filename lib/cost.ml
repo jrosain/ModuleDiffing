@@ -21,8 +21,8 @@ let f_conditional_move (f: 'a -> 'a -> t) : ('a -> 'a -> t) =
 
 let upper_bound (out: 'a -> int) (children1: 'a list) (children2: 'a list) (cond_moves1: 'a -> 'a -> t)
       (cond_moves2: 'a -> 'a -> t) (cw: t) (m: 'a) (n: 'a) : t =
-  let left = List.fold_left (fun s m' -> s + cc * ((out m') - 1) + (cond_moves1 m' n)) 0 children1 in
-  let right = List.fold_left (fun s n' -> s + cc * ((out n') - 1) + (cond_moves2 m n')) 0 children2 in
+  let left = List.fold_left (fun s m' -> s + cc * (Stdlib.max ((out m') - 1) 0) + (cond_moves1 m' n)) 0 children1 in
+  let right = List.fold_left (fun s n' -> s + cc * (Stdlib.max ((out n') - 1) 0) + (cond_moves2 m n')) 0 children2 in
   2*cw + left + right
 
 let prune_rule_1 (lb: t) (ub1: t) (ub2: t) : bool =
