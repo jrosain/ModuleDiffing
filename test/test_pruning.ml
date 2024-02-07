@@ -71,9 +71,9 @@ module Test = struct
     let label = (fst (snd input)) x in
     label ^ " (" ^ (string_of_int x) ^ ")"*)
 
-  let compare (input: t) (x: v) (y: v) : Cost.t =
-    let s1 = (fst (snd input)) x in
-    let s2 = (fst (snd input)) y in
+  let compare (input1: t) (input2: t) (x: v) (y: v) : Cost.t =
+    let s1 = (fst (snd input1)) x in
+    let s2 = (fst (snd input2)) y in
     let total = ref 0 in
     let f =
       (fun dest i c ->
@@ -249,7 +249,7 @@ let test_record_of_update_cost () =
       "recorded cost should be computed cost"
       (Pruning.CostTable.get costs (Node.mk b) (Node.mk a)) v in
   List.iter
-    (fun m -> List.iter (fun n -> is_expected_cost m n (Test.compare test1 m n)) (Test.elements test2))
+    (fun m -> List.iter (fun n -> is_expected_cost m n (Test.compare test1 test2 m n)) (Test.elements test2))
     (Test.elements test1)
 
 (* Test if, given a non-edge, it fails. *)
@@ -335,6 +335,57 @@ let test_leaves_lower_bound() =
   List.iter (fun (a, b) -> G.remove_edge graph (Node.mk a) (Node.mk b); test_costs())
     [(1, 6) ; (1, 7) ; (1, 8) ; (2, 6) ; (2, 7) ; (2, 8) ; (3, 6) ; (3, 7) ; (3, 8)]
 
+(* Lower-bound between the parents are updated when there is a child that is not linked to the *)
+(* any of the other's children. *)
+let test_removal_of_children_edges() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  G.remove_edge graph (Node.mk 2) (Node.mk 7);
+  G.remove_edge graph (Node.mk 3) (Node.mk 7);
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6) in
+  Alcotest.(check cost_t)
+    "The lower-bound cost between nodes that have not all its children linked should not be the
+     update cost"
+    (update_cost (fun c -> c + (Cost.cost_to_int Cost.cm)) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (fcost)
+
+(* Lower-bound between the parents s.t. none of their child are linked. *)
+let test_no_edges_means_maximum_lb_cost() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let rem_edge a b = G.remove_edge graph (Node.mk a) (Node.mk b) in
+  List.iter (fun (a, b) -> rem_edge a b) [2, 7; 3, 7; 2, 8; 3, 8];
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6) in
+  Alcotest.(check cost_t)
+    "The lower-bound cost between nodes that have not any of its children linked should be the
+     maximum lower-bound"
+    (update_cost
+       (fun c ->
+         c + (Stdlib.min (List.length (Test.children test1 1)) (List.length (Test.children test2 6)))*(Cost.cost_to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (fcost)
+
+(* Lower-bound between something with children and something without children. *)
+let test_children_no_children_lb_cost() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 7) in
+  Alcotest.(check cost_t)
+    "The lower-bound cost between something with children and something with no children should take
+     a big penality."
+    (update_cost
+       (fun c -> 2*c + (List.length (Test.children test1 1))*(Cost.cost_to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 7)))
+    (fcost);
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 2) (Node.mk 6) in
+  Alcotest.(check cost_t)
+    "The lower-bound cost between something with children and something with no children should take
+     a big penality."
+    (update_cost
+       (fun c -> 2*c + (List.length (Test.children test2 6))*(Cost.cost_to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk 2) (Node.mk 6)))
+    (fcost)
+
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
@@ -356,6 +407,9 @@ let () =
         test_case "edge_plus_minus_should_have_null_cost" `Quick test_plus_minus_lower_bound;
         test_case "edge_between_nonleaves_should_be_update_cost" `Quick test_roots_full_bipartite_lower_bound;
         test_case "leaves_lower_bound" `Quick test_leaves_lower_bound;
+        test_case "removal_of_children_edges_adds_cost" `Quick test_removal_of_children_edges;
+        test_case "removal_of_all_children_set_max_cost" `Quick test_no_edges_means_maximum_lb_cost;
+        test_case "cost_between_internal_node_and_leaf" `Quick test_children_no_children_lb_cost;
       ];
     ]
 

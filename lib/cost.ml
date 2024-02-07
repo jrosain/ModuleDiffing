@@ -44,7 +44,6 @@ let lower_bound (forced1: 'a -> t) (l1: 'a list) (forced2: 'a -> t) (l2: 'a list
     if (List.length l1) = 0 then cb
     else if (List.length l2) = 0 then ca
     else (Stdlib.min ca cb) in
-  (*let _ = Printf.printf "%d %d %d\n" cu co (2*cu + co) in*)
   2*cu + co
 
 let compare (x: t) (y: t) : int =

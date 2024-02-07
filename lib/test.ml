@@ -64,7 +64,7 @@ module Test = struct
     Tree.children (snd tree) (snd index)
     
   let elements (tree: t) : v list = (fst tree)
-  let compare (_: t) (x: v) (y: v) : Cost.t =
+  let compare (_: t) (_: t) (x: v) (y: v) : Cost.t =
     let s1, s2 = (fst x), (fst y) in
     let total = ref 0 in
     let f =

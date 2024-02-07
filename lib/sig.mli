@@ -19,8 +19,8 @@ module type INPUT = sig
   val children : t -> v -> v list (* Returns the children of the given element in the original
                                      data-structure. *)
   val elements : t -> v list (* Returns a list with all the elements. *)
-  val compare : t -> v -> v -> Cost.t (* Returns the cost that is needed to update the first
-                                         element as the second one (should be symmetric)*)
+  val compare : t -> t -> v -> v -> Cost.t (* Returns the cost that is needed to update the first
+                                              element as the second one (should be symmetric)*)
   val print_v : v -> unit
 end
 

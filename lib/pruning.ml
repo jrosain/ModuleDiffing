@@ -107,7 +107,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     let table = CostTable.create size in
     let add = fun x y c -> CostTable.add table (N.mk x) (N.mk y) c in
     List.iter
-      (fun m -> List.iter (fun n -> add m n (I.compare t1 m n)) (I.elements t2))
+      (fun m -> List.iter (fun n -> add m n (I.compare t1 t2 m n)) (I.elements t2))
       (I.elements t1);
     (table)
 

@@ -10,7 +10,7 @@ module type INPUT = sig
   val children : t -> v -> v list
                                  
   val elements : t -> v list
-  val compare : t -> v -> v -> Cost.t
+  val compare : t -> t -> v -> v -> Cost.t
   val print_v : v -> unit
 end
 
