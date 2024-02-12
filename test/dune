@@ -1,0 +1,4 @@
+(test
+ (name test_pruning)
+ (modules test_pruning)
+ (libraries alcotest ocamlgraph core_kernel.pairing_heap ModuleDiffing))

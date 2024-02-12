@@ -1,0 +1,42 @@
+name: Build & Tests
+
+on: push
+
+jobs:
+  Test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        ocaml-compiler:
+          - "5.1"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - run: make install
+      - run: BISECT_ENABLE=yes opam exec -- dune build
+      - run: opam exec -- dune runtest
+      - run: | 
+            cov=$(opam exec -- bisect-ppx-report summary | grep -oE "([0-9]+\.[0-9]+)")
+            echo "COVERAGE=$(echo ${cov})" >> $GITHUB_ENV
+            echo "COLOR=$(if [ $(echo "${cov} < 70" | bc -l) -eq 1 ]; then echo red; else echo green; fi)" >> $GITHUB_ENV	
+
+      - name: Badge creation
+        uses: schneegans/dynamic-badges-action@v1.0.0
+        with: 
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 3c06f9c5f9a2713932d8743db67e8b18
+          filename: ModuleDiffing.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COLOR }}
