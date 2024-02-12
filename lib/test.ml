@@ -73,7 +73,7 @@ module Test = struct
         with _ -> total := !total + (Char.code c) - (Char.code 'a') + 1) in
     (if (String.length s1) >= (String.length s2) then String.iteri (f s2) s1
      else String.iteri (f s1) s2);
-    Cost.int_to_cost (!total)
+    Cost.of_int (!total)
     
   let print_v (x: v) = print_int (snd x)
 end

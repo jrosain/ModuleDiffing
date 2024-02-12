@@ -81,7 +81,7 @@ module Test = struct
         with _ -> total := !total + (Char.code c) - (Char.code 'a') + 1) in
     (if (String.length s1) >= (String.length s2) then String.iteri (f s2) s1
      else String.iteri (f s1) s2);
-    Cost.int_to_cost (!total)
+    Cost.of_int (!total)
 end
 
 module Node = struct
@@ -133,7 +133,7 @@ let trivial_example () =
   test1, test2, graph
 
 
-let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.cost_to_int c)
+let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.to_int c)
 let cost_equal (ca: Cost.t) (cb: Cost.t) : bool = ((Cost.compare ca cb) = 0)
 let cost_t = Alcotest.testable cost_pp cost_equal
 
@@ -305,7 +305,7 @@ let test_plus_minus_lower_bound() =
     (P.lower_bound costs graph test1 test2 (Node.plus()) (Node.minus()))
 
 let update_cost f c =
-  Cost.int_to_cost (f (Cost.cost_to_int c))
+  Cost.of_int (f (Cost.to_int c))
 
 (* The lower-bound between the roots should be the update cost when no edge is removed. *)
 let test_roots_full_bipartite_lower_bound() =
@@ -346,7 +346,7 @@ let test_removal_of_children_edges() =
   Alcotest.(check cost_t)
     "The lower-bound cost between nodes that have not all its children linked should not be the
      update cost"
-    (update_cost (fun c -> c + (Cost.cost_to_int Cost.cm)) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (update_cost (fun c -> c + (Cost.to_int Cost.cm)) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
     (fcost)
 
 (* Lower-bound between the parents s.t. none of their child are linked. *)
@@ -361,7 +361,7 @@ let test_no_edges_means_maximum_lb_cost() =
      maximum lower-bound"
     (update_cost
        (fun c ->
-         c + (Stdlib.min (List.length (Test.children test1 1)) (List.length (Test.children test2 6)))*(Cost.cost_to_int Cost.cm))
+         c + (Stdlib.min (List.length (Test.children test1 1)) (List.length (Test.children test2 6)))*(Cost.to_int Cost.cm))
        (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
     (fcost)
 
@@ -374,7 +374,7 @@ let test_children_no_children_lb_cost() =
     "The lower-bound cost between something with children and something with no children should take
      a big penality."
     (update_cost
-       (fun c -> 2*c + (List.length (Test.children test1 1))*(Cost.cost_to_int Cost.cm))
+       (fun c -> 2*c + (List.length (Test.children test1 1))*(Cost.to_int Cost.cm))
        (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 7)))
     (fcost);
   let fcost = P.lower_bound costs graph test1 test2 (Node.mk 2) (Node.mk 6) in
@@ -382,7 +382,7 @@ let test_children_no_children_lb_cost() =
     "The lower-bound cost between something with children and something with no children should take
      a big penality."
     (update_cost
-       (fun c -> 2*c + (List.length (Test.children test2 6))*(Cost.cost_to_int Cost.cm))
+       (fun c -> 2*c + (List.length (Test.children test2 6))*(Cost.to_int Cost.cm))
        (Pruning.CostTable.get costs (Node.mk 2) (Node.mk 6)))
     (fcost)
 
@@ -437,9 +437,112 @@ let test_nonleaves_no_removal_upper_bound() =
   Alcotest.(check cost_t)
     "The upper-bound cost between nodes that have all their children linked should be the
      maximum upper-bound"
-    (update_cost (fun c -> 2*c + 4*(3*(Cost.cost_to_int Cost.cc) + (Cost.cost_to_int Cost.cm)))
+    (update_cost (fun c -> 2*c + 4*(3*(Cost.to_int Cost.cc) + (Cost.to_int Cost.cm)))
        (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
-    (ucost)  
+    (ucost)
+
+let test_leaves_min_ub_cost() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let test_mincost (a, b) = 
+    let ucost = P.compute_upper_bound (Node.mk a) (Node.mk b) costs test1 test2 graph in
+    Alcotest.(check cost_t)
+      "The upper-bound cost between leaves should be the minimum upper-bound (i.e., the update cost)"
+      (update_cost (fun c -> 2*c) (Pruning.CostTable.get costs (Node.mk a) (Node.mk b)))
+      (ucost)
+  in List.iter test_mincost [2, 7; 2, 8; 3, 7; 3, 8]
+
+let test_removal_irrelevant_edges_upper_bound() = 
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  G.remove_edge graph (Node.mk 1) (Node.plus());
+  Alcotest.(check cost_t)
+    "The upper-bound cost should not change if an irrelevant edge is removed"
+    (ub)
+    (P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph)
+
+let test_removal_relevant_edges_upper_bound() = 
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  G.remove_edge graph (Node.mk 1) (Node.mk 7);
+  Alcotest.(check int)
+    "The upper-bound cost should change if a relevant edge is removed"
+    (1)
+    (Cost.compare ub (P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph))
+
+let rec validate msg goal = function
+  | [] -> ()
+  | [_] -> ()
+  | h::x::t ->
+     let comp = (Cost.compare h x) in
+     if (List.exists (fun v -> comp = v) goal) then
+       validate msg goal t
+     else
+       Alcotest.(check int)
+         msg
+         (List.hd goal)
+         (Cost.compare h x)
+
+let test_removal_edges_upper_bound() = 
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  let successive_scores =
+    let compute (a, b) =
+      G.remove_edge graph (Node.mk a) (Node.mk b);
+      P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph
+    in List.map (compute) [(2, 7) ; (3, 8) ; (2, 8) ; (3, 8)]
+  in (validate "The upper-bound should decrease when removing edges" [1] (ub::successive_scores))
+
+(* ---------------------------------------------------------------------------------------------- *)
+(* HEAPS *)
+
+let heap_to_list h =
+  let rec aux (acc: Cost.t list) =
+    try 
+      let acc' = (Pruning.UpperBoundHeap.top h) :: acc in
+      Pruning.UpperBoundHeap.remove_top h;
+      aux acc'
+    with _ -> acc
+  in aux []
+
+let test_heap_init () =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  let ub_table = P.init_upper_bounds test1 test2 graph costs in
+  (* For each element of test1 (resp. test2), check if the heap has size |t2| + 1 (resp. |t1| + 1)
+  and that each heap can be converted to a list that is validated. *)
+  let check_heap test oth =
+    List.iter
+      (fun m ->
+        let l = heap_to_list (Hashtbl.find ub_table (Node.mk m)) in
+        Alcotest.(check int)
+          "When no edge is removed, the number of elements in an upper-bound heap should be the max."
+          ((List.length (Test.elements oth)) + 1)
+          (List.length l);
+        validate "The elements of the upper bound heap should be in (non-strict) increasing order" [1;0] l)
+      (Test.elements test)
+  in
+  check_heap test1 test2;
+  check_heap test2 test1
+
+let test_heap_init_edge_removed() =
+  let test1, test2, graph = trivial_example() in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  G.remove_edge graph (Node.mk 1) (Node.mk 7);
+  let ub_table = P.init_upper_bounds test1 test2 graph costs in
+  let l1 = heap_to_list (Hashtbl.find ub_table (Node.mk 1)) in
+  Alcotest.(check int)
+    "When edges are removed, the number of elements in an upper-bound heap should be adjusted accordingly."
+    (List.length (Test.elements test2))
+    (List.length l1);
+  let l7 = heap_to_list (Hashtbl.find ub_table (Node.mk 7)) in
+  Alcotest.(check int)
+    "When edges are removed, the number of elements in an upper-bound heap should be adjusted accordingly."
+    (List.length (Test.elements test1))
+    (List.length l7)
 
 let () =
   Alcotest.run "Pruning" [
@@ -452,26 +555,35 @@ let () =
         test_case "remove_edges_move_right" `Quick test_remove_edges_forced_move_right;
       ];
       "update-costs", [
-        test_case "record_update_costs" `Quick test_record_of_update_cost;
-        test_case "fail_on_non_edge" `Quick test_fail_on_non_edge;
-      ];
+          test_case "record_update_costs" `Quick test_record_of_update_cost;
+          test_case "fail_on_non_edge" `Quick test_fail_on_non_edge;
+        ];
       "lower-bound", [
-        test_case "plus_minus_combinations_that_should_fail" `Quick test_lower_bound_impossible_pm_combinations;
-        test_case "edge_to_plus_should_have_ci_lb" `Quick test_plus_lower_bound;
-        test_case "edge_to_minus_should_have_cd_lb" `Quick test_minus_lower_bound;
-        test_case "edge_plus_minus_should_have_null_cost" `Quick test_plus_minus_lower_bound;
-        test_case "edge_between_nonleaves_should_be_update_cost" `Quick test_roots_full_bipartite_lower_bound;
-        test_case "leaves_lower_bound" `Quick test_leaves_lower_bound;
-        test_case "removal_of_children_edges_adds_cost" `Quick test_removal_of_children_edges;
-        test_case "removal_of_all_children_set_max_cost" `Quick test_no_edges_means_maximum_lb_cost;
-        test_case "cost_between_internal_node_and_leaf" `Quick test_children_no_children_lb_cost;
-      ];
+          test_case "plus_minus_combinations_that_should_fail" `Quick test_lower_bound_impossible_pm_combinations;
+          test_case "edge_to_plus_should_have_ci_lb" `Quick test_plus_lower_bound;
+          test_case "edge_to_minus_should_have_cd_lb" `Quick test_minus_lower_bound;
+          test_case "edge_plus_minus_should_have_null_cost" `Quick test_plus_minus_lower_bound;
+          test_case "edge_between_nonleaves_should_be_update_cost" `Quick test_roots_full_bipartite_lower_bound;
+          test_case "leaves_lower_bound" `Quick test_leaves_lower_bound;
+          test_case "removal_of_children_edges_adds_cost" `Quick test_removal_of_children_edges;
+          test_case "removal_of_all_children_set_max_cost" `Quick test_no_edges_means_maximum_lb_cost;
+          test_case "cost_between_internal_node_and_leaf" `Quick test_children_no_children_lb_cost;
+        ];
       "upper-bound", [
-        test_case "plus_minus_cancel_each_other_ub" `Quick test_plus_minus_cancel_each_other_ub;
-        test_case "plus_minus_combinations_that_fail" `Quick test_ub_plus_minus_combinations_that_should_fail;
-        test_case "plus_upper_bound" `Quick test_plus_upper_bound;
-        test_case "minus_upper_bound" `Quick test_minus_upper_bound;
-        test_case "nonleaves_no_removal" `Quick test_nonleaves_no_removal_upper_bound;
-      ];
+          test_case "plus_minus_cancel_each_other_ub" `Quick test_plus_minus_cancel_each_other_ub;
+          test_case "plus_minus_combinations_that_fail" `Quick test_ub_plus_minus_combinations_that_should_fail;
+          test_case "plus_upper_bound" `Quick test_plus_upper_bound;
+          test_case "minus_upper_bound" `Quick test_minus_upper_bound;
+          test_case "nonleaves_no_removal" `Quick test_nonleaves_no_removal_upper_bound;
+          test_case "leaves_min_cost" `Quick test_leaves_min_ub_cost;
+          test_case "removing_irrelevant_edges" `Quick test_removal_irrelevant_edges_upper_bound;
+          test_case "removing_relevant_edges" `Quick test_removal_relevant_edges_upper_bound;
+          test_case "removing_edges_lowers_ub" `Quick test_removal_edges_upper_bound;
+        ];
+      "heaps", [
+          test_case "right_heap_initialization" `Quick test_heap_init;
+          test_case "right_heap_init_when_edge_removed" `Quick test_heap_init_edge_removed;
+        ];
+      (* TODO: test the pruning. *)
     ]
 

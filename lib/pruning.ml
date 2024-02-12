@@ -32,6 +32,9 @@ module UpperBoundHeap = struct
     let token = Hashtbl.find (fst heap) target in
     Heap.remove (snd heap) token
 
+  let remove_top (heap: 'a t) : unit =
+    Heap.remove_top (snd heap)
+
   (* Update of an element in O(log(n)) time. *)
   (*let update (heap: 'a t) (target: 'a) (value: heap_el) : unit =
     let token = Heap.update (snd heap) (Hashtbl.find (fst heap) target) value in
@@ -228,7 +231,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
             (G.succ graph m)
        then G.remove_edge graph (N.minus()) m
        else ()
-    | _ -> failwith "Minus node cannot link with itself"
+    | _ -> failwith "internal error"
 
   let try_remove_edge_right (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (n: G.V.t) : unit =
     match n with
@@ -242,7 +245,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
             (G.succ graph n)
        then G.remove_edge graph (N.plus()) n
        else ()
-    | _ -> failwith "Plus node cannot link with itself"
+    | _ -> failwith "internal error"
 
   (* Remove the edges to (+) and (-) if there exists a lower bound that is better than deletion+insertion. *)
   let prune_useless_plus_minus (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) : G.t =

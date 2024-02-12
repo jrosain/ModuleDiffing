@@ -62,7 +62,7 @@ val prune_rule_2 : t -> bool
 (** Compares two costs. *)
 val compare : t -> t -> int
 
-val int_to_cost : int -> t
+val of_int : int -> t
 (* The update cost is given by the data-structure. *)
 
-val cost_to_int : t -> int
+val to_int : t -> int
