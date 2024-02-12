@@ -3,7 +3,7 @@ let main () =
     ] in
   let message = "Welcome to the diffing testing utility." in
   let _ = Arg.parse optlist (fun _ -> ()) message in
-  ModuleDiffing.Test.launch_test ();
+  ModuleDiffing.Example.launch_test ();
   (*let g = Sig.G.create () in*)
   ()
 

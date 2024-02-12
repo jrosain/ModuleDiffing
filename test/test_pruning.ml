@@ -544,6 +544,58 @@ let test_heap_init_edge_removed() =
     (List.length (Test.elements test1))
     (List.length l7)
 
+(* ---------------------------------------------------------------------------------------------- *)
+(* PRUNING IN ITSELF *)
+
+let test_all_nodes_have_at_least_one_edge() =
+  let test1, test2, graph = trivial_example() in
+  let graph = P.prune test1 test2 graph in
+  G.iter_vertex
+    (fun x ->
+      Alcotest.(check bool)
+        "Every vertex of the pruned graph should have at least one neighbour."
+        (true)
+        ((G.out_degree graph x) > 0))
+    graph
+
+let test_example_expect_edges() =
+  let test1, test2, graph = trivial_example() in
+  let graph = P.prune test1 test2 graph in
+  let check_edge msg x y =
+    Alcotest.(check bool)
+      ("Expected an edge between " ^ msg)
+      (true)
+      (G.mem_edge graph x y)
+  in
+  check_edge "the roots." (Node.mk 1) (Node.mk 6);
+  check_edge "the leaves." (Node.mk 2) (Node.mk 7);
+  check_edge "the leaves." (Node.mk 3) (Node.mk 8)
+
+let test_same_root_no_link_plus_minus() = 
+  let test1, test2, graph = trivial_example() in
+  let graph = P.prune test1 test2 graph in
+  let check_edge msg x y =
+    Alcotest.(check bool)
+      ("Expected no edge between " ^ msg)
+      (false)
+      (G.mem_edge graph x y)
+  in
+  check_edge "root and minus." (Node.mk 1) (Node.minus());
+  check_edge "root and plus." (Node.plus()) (Node.mk 6)
+
+let test_edge_labeling() =
+  let test1, test2, graph = trivial_example() in
+  let graph = P.prune test1 test2 graph in
+  let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
+  G.iter_edges
+    (fun x y ->
+      let e = G.find_edge graph x y in
+      Alcotest.(check cost_t)
+        "The edges of the pruned graph should be labeled with lower-bounds."
+        (P.lower_bound costs graph test1 test2 x y)
+        (G.E.label e))
+    graph
+
 let () =
   Alcotest.run "Pruning" [
       "forced-moves", [
@@ -584,6 +636,11 @@ let () =
           test_case "right_heap_initialization" `Quick test_heap_init;
           test_case "right_heap_init_when_edge_removed" `Quick test_heap_init_edge_removed;
         ];
-      (* TODO: test the pruning. *)
+      "pruning", [
+          test_case "all_nodes_have_one_neighbours_or_more" `Quick test_all_nodes_have_at_least_one_edge;
+          test_case "edges_expectation_in_example" `Quick test_example_expect_edges;
+          test_case "same_root_no_link_plus_minus" `Quick test_same_root_no_link_plus_minus;
+          test_case "edge_are_labeled" `Quick test_edge_labeling;
+        ];
     ]
 
