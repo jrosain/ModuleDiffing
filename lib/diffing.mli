@@ -2,8 +2,11 @@
 
 module Make(I: Sig.INPUT) : sig
   type patch
+  type algo = Dict | Mh_diff
 
   module G : Sig.G
 
-  val exec : I.t -> I.t -> patch
+  val exec : ?algo:algo -> I.t -> I.t -> patch
+
+  val display : patch -> unit
 end

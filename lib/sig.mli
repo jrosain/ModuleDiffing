@@ -9,19 +9,22 @@
 module type INPUT = sig
   type i (* The type of the input data-structure. *)
   type t (* The type of the object manipulated. *)
-  type v (* The type of the internal representation of an element. 
+  type v (* The type of the internal representation of an element (in i). 
             It should be comparable using Stdlib.compare, hashable by Hashtbl.hash and
             compared with (=). *)
+  type node (* The internal type of an element. *)
 
   val create : i -> t
-  val parent : t -> v -> v option (* Returns the parent of the given element in the original
-                                     data-structure. *)
-  val children : t -> v -> v list (* Returns the children of the given element in the original
-                                     data-structure. *)
-  val elements : t -> v list (* Returns a list with all the elements. *)
-  val compare : t -> t -> v -> v -> Cost.t (* Returns the cost that is needed to update the first
-                                              element as the second one (should be symmetric)*)
-  val print_v : v -> unit
+  val parent : t -> node -> node option (* Returns the parent of the given element in the original
+                                           data-structure. *)
+  val children : t -> node -> node list (* Returns the children of the given element in the original
+                                           data-structure. *)
+  val elements : t -> node list (* Returns a list with all the elements. *)
+  val compare : node -> node -> Cost.t (* Returns the cost that is needed to update the first
+                                          element as the second one (should be symmetric)*)
+
+  val label : node -> string
+  val value : node -> v
 end
 
 module Edge : sig
@@ -35,8 +38,8 @@ end
 module type Node = sig 
   module Input : INPUT
 
-  type t = Original of Input.v | Minus | Plus 
-  val mk : Input.v -> t
+  type t = Original of Input.node | Minus | Plus 
+  val mk : Input.node -> t
   val minus : unit -> t
   val plus : unit -> t
   val compare : t -> t -> int

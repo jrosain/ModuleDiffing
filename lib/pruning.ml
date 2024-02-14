@@ -76,13 +76,13 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
   (* A forced move is defined as follows: 
          C-MF(m', n) = 0  if there exists n' in C(n) s.t. m'n' is an edge
                        cm otherwise (or Cost.null) *)
-  let forced_move_left (other: I.t) (graph: G.t) (m': I.v) (n: I.v) : Cost.t =
+  let forced_move_left (other: I.t) (graph: G.t) (m': I.node) (n: I.node) : Cost.t =
     (* TODO: memoization *)
     let child_has_edge = fun n' -> G.mem_edge graph (N.mk m') (N.mk n') in
     if List.exists (child_has_edge) (I.children other n) then Cost.null
     else Cost.cm
 
-  let forced_move_right (other: I.t) (graph: G.t) (m: I.v) (n': I.v) : Cost.t =
+  let forced_move_right (other: I.t) (graph: G.t) (m: I.node) (n': I.node) : Cost.t =
     (* TODO: memoization *)
     let child_has_edge = fun m' -> G.mem_edge graph (N.mk m') (N.mk n') in
     if List.exists (child_has_edge) (I.children other m) then Cost.null
@@ -110,7 +110,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     let table = CostTable.create size in
     let add = fun x y c -> CostTable.add table (N.mk x) (N.mk y) c in
     List.iter
-      (fun m -> List.iter (fun n -> add m n (I.compare t1 t2 m n)) (I.elements t2))
+      (fun m -> List.iter (fun n -> add m n (I.compare m n)) (I.elements t2))
       (I.elements t1);
     (table)
 

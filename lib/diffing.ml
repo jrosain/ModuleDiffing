@@ -1,5 +1,6 @@
 module Make(I: Sig.INPUT) = struct
-  type patch = Empty
+  type patch = (I.node * Label.t * I.node) list
+  type algo = Dict | Mh_diff
 
   (* -------------------- Graph definition -------------------- *)
   
@@ -7,7 +8,7 @@ module Make(I: Sig.INPUT) = struct
   module Node = struct
     module Input = I
     
-    type t = Original of Input.v | Minus | Plus
+    type t = Original of Input.node | Minus | Plus
     let mk v = Original v
     let minus () = Minus
     let plus () = Plus
@@ -43,25 +44,27 @@ module Make(I: Sig.INPUT) = struct
   
   (* -------------------- End of Modules instantation -------------------- *)
   
-  let exec (t1: I.t) (t2: I.t) : patch =
+  let mhdiff (t1: I.t) (t2: I.t) : patch =
     let graph = create_bipartite t1 t2 in
     Printf.printf "#edges before prune: %d\n" (G.nb_edges graph);
     let graph = P.prune t1 t2 graph in
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
-    G.iter_edges
-      (fun x y ->
-        print_string "";
-        (match x with
-        | Node.Plus -> print_string "+"
-        | Node.Minus -> print_string "-"
-        | Node.Original m -> I.print_v m);
-        print_string ",";
-        (match y with
-        | Node.Plus -> print_string "+"
-        | Node.Minus -> print_string "-"
-        | Node.Original m -> I.print_v m);
-        print_string " ")
-      graph;
-    (* Then flows then patch reconstruction *)
-    Empty
+    []
+  
+  let dictionnary (_: I.t) (_: I.t) : patch =
+    []
+
+  let exec ?(algo = Mh_diff) (t1: I.t) (t2: I.t) : patch =
+    match algo with
+    | Mh_diff -> mhdiff t1 t2
+    | Dict    -> dictionnary t1 t2
+
+  (* -------------------- Printing the patch -------------------- *)
+
+  let display (patch: patch) =
+    let rec aux (modif: patch) =
+      match modif with
+      | [] -> ()
+      | _ :: t -> (* display_modif h; *) aux t
+    in aux patch
 end
