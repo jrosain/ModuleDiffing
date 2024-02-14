@@ -1,5 +1,5 @@
 (library
  (name ModuleDiffing)
  (public_name ModuleDiffing)
- (libraries ocamlgraph core_kernel.pairing_heap)
+ (libraries ocamlgraph core_kernel.pairing_heap compiler-libs)
  (preprocess (pps bisect_ppx)))
