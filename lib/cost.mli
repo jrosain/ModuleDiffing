@@ -12,6 +12,9 @@
 (** The type of the costs. *)
 type t
 
+(** Max value that can be taken by an edge, equivalent to a +infty cost *)
+val max : t
+
 (** The default value that should take an edge if no cost has been computed. *)
 val null : t
 
@@ -67,3 +70,9 @@ val of_int : int -> t
 (* The update cost is given by the data-structure. *)
 
 val to_int : t -> int
+
+(** Substract two costs  *)
+val sub : t -> t -> t
+
+(** Adding two costs  *)
+val add : t -> t -> t

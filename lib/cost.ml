@@ -4,6 +4,7 @@ let null = 0
 
 (* /!\ ARBITRARY VALUES /!\ *)
 (* They'll need to be determined by testing the algorithm. *)
+let max = 21474836471
 let ci = 1
 let cd = 1
 let cc = 2
@@ -53,3 +54,7 @@ let compare (x: t) (y: t) : int =
 let of_int (v: int) : t = v
 
 let to_int (v: t) : int = v
+
+let sub (x: t) (y: t) : int = x - y
+
+let add (x: t) (y: t) : int = x + y

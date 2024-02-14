@@ -41,6 +41,7 @@ module Make(I: Sig.INPUT) = struct
 
   module P = Pruning.Make(I)(Node)(G)
   module Dict = Dico.Make(I)
+  module EC = Edge_cover.Make(G)
   
   (* -------------------- End of Modules instantation -------------------- *)
   
@@ -49,6 +50,8 @@ module Make(I: Sig.INPUT) = struct
     Printf.printf "#edges before prune: %d\n" (G.nb_edges graph);
     let graph = P.prune t1 t2 graph in
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
+    let graph = EC.bipartite_min_edge_cover graph in
+    (* Then flows then patch reconstruction *)
     (* G.iter_edges *)
     (*   (fun x y -> *)
     (*     match (x, y) with *)
