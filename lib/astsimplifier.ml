@@ -1,4 +1,3 @@
-open Pprintast;;
 (*
 type tleaf = 
    | Val of value_description
@@ -15,14 +14,14 @@ type stree =
 *)
 
 let s = Parse.interface (Lexing.from_string "module type Hello_type =
-   sig
-     val hello : unit -> unit
-   end") in 
+  sig
+    val hello : unit -> unit
+  end") in 
 
-Format.printf "%a" Pprintast.interface s;;
+Format.printf "%a" Pprintast.signature s;;
 
 (*
 let rec tree_builder (s : signature) : stree = 
-   let (shead::_) = s in (* Only one signature in the list *)
-      
+  let (shead::_) = s in (* Only one signature in the list *)
+     
 *)

@@ -1,5 +1,0 @@
-(executable
- (public_name astparser)
- (name main)
- (libraries compiler-libs.common)
-)
