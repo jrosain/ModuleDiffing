@@ -1,6 +1,5 @@
 module Make(I: Sig.INPUT) = struct
-  type patch = (I.node * Label.t * I.node) list
-  type algo = Dict | Mh_diff
+  type patch = (I.node Sig.patch)
 
   (* -------------------- Graph definition -------------------- *)
   
@@ -41,6 +40,7 @@ module Make(I: Sig.INPUT) = struct
   (* -------------------- Modules instantiation -------------------- *)
 
   module P = Pruning.Make(I)(Node)(G)
+  module Dict = Dico.Make(I)
   
   (* -------------------- End of Modules instantation -------------------- *)
   
@@ -51,20 +51,25 @@ module Make(I: Sig.INPUT) = struct
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
     []
   
-  let dictionnary (_: I.t) (_: I.t) : patch =
-    []
+  let dictionnary (t1: I.t) (t2: I.t) : patch =
+    Dict.diffing t1 t2
 
-  let exec ?(algo = Mh_diff) (t1: I.t) (t2: I.t) : patch =
-    match algo with
-    | Mh_diff -> mhdiff t1 t2
-    | Dict    -> dictionnary t1 t2
+  let exec (t1: I.t) (t2: I.t) : patch =
+    if !Opt.dico then dictionnary t1 t2
+    else mhdiff t1 t2
 
   (* -------------------- Printing the patch -------------------- *)
 
-  let display (patch: patch) =
-    let rec aux (modif: patch) =
+  let display (patch: patch) : unit=
+    let rec aux (modif: patch) : unit =
       match modif with
       | [] -> ()
-      | _ :: t -> (* display_modif h; *) aux t
+      | h :: t ->
+         (match h with
+          | Ins node -> Printf.printf "* Insertion: %s\n" (I.label node)
+          | Del node -> Printf.printf "* Deletion: %s\n" (I.label node)
+          | Upd (n1, n2) -> Printf.printf "* Update: %s --> %s\n" (I.label n1) (I.label n2)
+          | _ -> failwith "internal error");
+         aux t
     in aux patch
 end

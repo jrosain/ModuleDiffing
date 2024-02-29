@@ -8,6 +8,7 @@ clean:
 	rm -rf _build
 	rm -f *~
 	rm -f "#*"
+	rm -f *.coverage
 
 install:
 	opam update

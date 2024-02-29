@@ -48,3 +48,5 @@ module type Node = sig
 end
 
 module type G = Graph.Sig.I
+
+type 'a patch = ('a Label.t) list

@@ -1,11 +1,10 @@
-type t =
-  | Ins
-  | Del
+type 'a t =
+  | Ins of 'a
+  | Del of 'a
   | Nil
-  | Mov
-  | Cpy
-  | Comb of t * update
-and update =
-  | Upd
+  | Mov of 'a * 'a
+  | Cpy of 'a * 'a
+  | Comb of 'a t * 'a t (* <--- second element of comb should be an update *)
+  | Upd of 'a * 'a
 
-val default : t
+val default : 'a t
