@@ -20,12 +20,12 @@ module Make(I: Sig.INPUT) = struct
            we need to change the value of d1 to the value of d2
         c. if values are not the same and both are dico, we do a patch recursion
       3. the key is in d1 and not in d2, we need to add it to d1
-         -> actually, we should count multiplicity.
+      --> /!\ Maybe the insertions should be computed recursively /!\
       
       For point 1 and 2 we just iterate over all values of d1
       For point 3, we just have to remove good keys (keys in d1 and d2) while itering over d1
       we then only have to iterate over all remaining values in d2 *)
-  let diffing (d1: I.t) (d2: I.t) : patch =
+  let rec diff (ld1: I.node list) (ld2: I.node list) (d1: I.t) (d2: I.t) : patch =
     let rec traverse (dico: I.node list) (other: I.node list) (acc: patch) : patch =
       match dico with
       | [] -> acc
@@ -37,13 +37,17 @@ module Make(I: Sig.INPUT) = struct
             if not (is_value_equal node value) then
               let c1, c2 = I.children d1 node, I.children d2 value in
               match (c1, c2) with
-              | _ :: _, _ :: _  -> traverse t (other) (traverse c1 c2 acc)
+              | _ :: _, _ :: _  -> traverse t (other) ((diff c1 c2 d1 d2) @ acc)
               | _, _ -> traverse t (other) ((Label.Upd (node, value)) :: acc)
             else
               traverse t other acc
     in
     let insertions =
       List.map (fun x -> Label.Ins x)
-        (List.filter (fun node -> not (mem_element (I.label node) (I.elements d1))) (I.elements d2))
-    in (traverse (I.elements d1) (I.elements d2) []) @ insertions
+        (List.filter (fun node -> not (mem_element (I.label node) ld1)) ld2)
+    in (traverse ld1 ld2 []) @ insertions
+
+
+  let diffing (d1: I.t) (d2: I.t) : patch =
+    diff [I.root d1] [I.root d2] d1 d2
 end

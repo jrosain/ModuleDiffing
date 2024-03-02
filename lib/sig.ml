@@ -13,6 +13,7 @@ module type INPUT = sig
 
   val label : node -> string
   val value : node -> v
+  val root  : t -> node
 end
 
 module Edge = struct

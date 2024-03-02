@@ -70,6 +70,10 @@ module Test = struct
 
   let label (element: node) : string = fst element
   let value (element: node) : v = snd element
+  let root  (tree: t) : node =
+    match (snd (snd tree)) with
+    | Leaf -> ("", -1)
+    | Node (_, value, _) -> ((fst (snd tree)) value, value)
 
   let compare (x: node) (y: node) : Cost.t =
     let s1 = label x in

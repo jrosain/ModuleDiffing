@@ -78,6 +78,7 @@ module Test = struct
 
   let label (element: node) : string = fst element
   let value (element: node) : v = snd element
+  let root (tree: t) : node = List.hd (fst tree)
 end
 
 module Diff = Diffing.Make(Test)

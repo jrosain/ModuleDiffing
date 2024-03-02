@@ -22,9 +22,9 @@ module type INPUT = sig
   val elements : t -> node list (* Returns a list with all the elements. *)
   val compare : node -> node -> Cost.t (* Returns the cost that is needed to update the first
                                           element as the second one (should be symmetric)*)
-
   val label : node -> string
   val value : node -> v
+  val root  : t -> node
 end
 
 module Edge : sig
