@@ -190,15 +190,16 @@ let test_bipartite_graph_complete () =
       (c)
       (G.E.label e)
   in
+  let max = Cost.of_int ((Cost.to_int Cost.max) / 2) in
   expected_edge_cost 1 2 Cost.null;
   expected_edge_cost 1 3 Cost.null;
   expected_edge_cost 1 4 Cost.null;
   expected_edge_cost 5 2 Cost.null;
   expected_edge_cost 5 3 Cost.null;
-  expected_edge_cost 5 4 Cost.max;
-  expected_edge_cost 1001 2 Cost.max;
-  expected_edge_cost 1001 3 Cost.max;
-  expected_edge_cost 1001 4 Cost.max;
+  expected_edge_cost 5 4 max;
+  expected_edge_cost 1001 2 max;
+  expected_edge_cost 1001 3 max;
+  expected_edge_cost 1001 4 max;
 
   (* LThe old graph shouldn't be modyfied, it should create a copy *)
   Alcotest.(check bool)
