@@ -7,7 +7,7 @@ module Make(I: Sig.INPUT) = struct
   module Node = struct
     module Input = I
     
-    type t = Original of Input.node | Minus | Plus
+    type t = Original of Input.node | Minus | Plus | Dummy of int
     let mk v = Original v
     let minus () = Minus
     let plus () = Plus
@@ -41,7 +41,7 @@ module Make(I: Sig.INPUT) = struct
 
   module P = Pruning.Make(I)(Node)(G)
   module Dict = Dico.Make(I)
-  module EC = Edge_cover.Make(G)
+  module EC = Edge_cover.Make(I)(Node)(G)
   
   (* -------------------- End of Modules instantation -------------------- *)
   

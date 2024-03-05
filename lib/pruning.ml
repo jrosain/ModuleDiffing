@@ -103,6 +103,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
     | N.Plus, N.Minus -> Cost.null
     | N.Plus, _  -> Cost.lb_ci()
     | _, N.Minus -> Cost.lb_cd()
+    | _, _ -> failwith "internal error"
 
   (* Computation of all the update costs. It is done only once and stored as-is as
      computing it every time that is needed might be costly. *)
@@ -139,6 +140,7 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
        (* Computing the upper bound cost needs the total number of edges of a vertex. *)
        let out_deg = fun m -> G.out_degree graph (N.mk m) in
        Cost.upper_bound out_deg c1 c2 cm1 cm2 cw m n
+    | _, _ -> failwith "internal error"
   
   (* Inits the min-heap at node x. *)
   let init_min_heap (x: G.V.t) (succ: G.V.t list) (update_costs: cost_table) (t1: I.t) (t2: I.t)

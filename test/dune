@@ -2,3 +2,7 @@
  (name test_pruning)
  (modules test_pruning)
  (libraries alcotest ocamlgraph core_kernel.pairing_heap ModuleDiffing))
+(test
+ (name test_hungarian_method)
+ (modules test_hungarian_method)
+ (libraries alcotest ocamlgraph core_kernel.pairing_heap ModuleDiffing))

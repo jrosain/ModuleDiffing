@@ -92,7 +92,7 @@ end
 module Node = struct
   module Input = Test
   
-  type t = Original of Input.node | Minus | Plus
+  type t = Original of Input.node | Minus | Plus | Dummy of int
   let mk v = Original v
   let minus () = Minus
   let plus () = Plus
