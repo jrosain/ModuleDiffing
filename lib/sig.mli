@@ -38,7 +38,7 @@ end
 module type Node = sig 
   module Input : INPUT
 
-  type t = Original of Input.node | Minus | Plus | Dummy of int 
+  type t = Original of Input.node | Minus | Plus | Dummy of t 
   val mk : Input.node -> t
   val minus : unit -> t
   val plus : unit -> t

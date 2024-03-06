@@ -6,3 +6,7 @@
  (name test_hungarian_method)
  (modules test_hungarian_method)
  (libraries alcotest ocamlgraph core_kernel.pairing_heap ModuleDiffing))
+(test
+ (name test_edge_cover)
+ (modules test_edge_cover)
+ (libraries alcotest ocamlgraph core_kernel.pairing_heap ModuleDiffing))

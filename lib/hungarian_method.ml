@@ -1,5 +1,3 @@
-(* Edge Cover probleme describes in theorem 7.4 here: 
-   https://doc.lagout.org/science/0_Computer%20Science/2_Algorithms/Algorithms%20and%20Theory%20of%20Computation%20Handbook%20%5BAtallah%201998-11-23%5D.pdf *)
 (* Implementation of the hungarian algorithm taken here 
    https://homes.di.unimi.it/righini/Didattica/OttimizzazioneCombinatoria/MaterialeOC/11%20-%20Min%20cost%20bipartite%20matching.pdf *)
 module Make(G: Sig.G with type E.label = Cost.t)
@@ -71,22 +69,22 @@ module Make(G: Sig.G with type E.label = Cost.t)
 
     (* Init ui for every node i of the first set of the bipartite *)
     List.iter (fun i ->
-      let min_i = G.fold_succ (fun j max ->
+      let min_i = G.fold_succ (fun j min_cost ->
         let edge_ij = G.find_edge graph i j in
         let cost = G.E.label edge_ij in
-        if Cost.compare cost max < 0 then cost else max
+        if Cost.compare cost min_cost < 0 then cost else min_cost
       ) graph i Cost.max in
       Hashtbl.add u i min_i;
     ) bip1;
 
     (* Init vj for every node j of the second set of the bipartite *)
     List.iter (fun j ->
-      let min_j = G.fold_succ (fun i max ->
+      let min_j = G.fold_succ (fun i min_cost ->
         let edge_ij = G.find_edge graph i j in
         let cost_edge = G.E.label edge_ij in
         let ui = Hashtbl.find u i in
         let cost = Cost.sub cost_edge ui in 
-        if Cost.compare cost max < 0 then cost else max
+        if Cost.compare cost min_cost < 0 then cost else min_cost
       ) graph j Cost.max in
       Hashtbl.add v j min_j;
     ) bip2;
