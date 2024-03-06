@@ -3,6 +3,7 @@
 
 diffing
 _coverage
+*.coverage
 
 ### Emacs ###
 # -*- mode: gitignore; -*-

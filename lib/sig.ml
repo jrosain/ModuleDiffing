@@ -3,15 +3,17 @@ module type INPUT = sig
   type i
   type t
   type v
+  type node
 
   val create : i -> t
-  val parent : t -> v -> v option
-                          
-  val children : t -> v -> v list
-                                 
-  val elements : t -> v list
-  val compare : t -> t -> v -> v -> Cost.t
-  val print_v : v -> unit
+  val parent : t -> node -> node option 
+  val children : t -> node -> node list 
+  val elements : t -> node list
+  val compare : node -> node -> Cost.t
+
+  val label : node -> string
+  val value : node -> v
+  val root  : t -> node
 end
 
 module Edge = struct
@@ -24,8 +26,8 @@ end
 module type Node = sig 
   module Input : INPUT
 
-  type t = Original of Input.v | Minus | Plus 
-  val mk : Input.v -> t
+  type t = Original of Input.node | Minus | Plus 
+  val mk : Input.node -> t
   val minus : unit -> t
   val plus : unit -> t
   val compare : t -> t -> int
@@ -34,3 +36,5 @@ module type Node = sig
 end
 
 module type G = Graph.Sig.I
+
+type 'a patch = ('a Label.t) list

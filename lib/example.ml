@@ -47,24 +47,25 @@ end
 
 module Test = struct
   type i = Tree.t
-  type v = (string * int)
-  type t = (v list * i)
+  type v = int
+  type node = (string * v)
+  type t = (node list * i)
 
   let create (input: i) : t =
-    let rec aux (tree: i) : v list =
+    let rec aux (tree: i) : node list =
       match tree with
       | Tree.Null -> []
       | Tree.Node (v, children) -> v :: (List.flatten (List.map aux children))
     in (aux input, input)
          
-  let parent (tree: t) (index: v) : v option =
+  let parent (tree: t) (index: node) : node option =
     Tree.parent (snd tree) (snd index)
   
-  let children (tree: t) (index: v) : v list =
+  let children (tree: t) (index: node) : node list =
     Tree.children (snd tree) (snd index)
     
-  let elements (tree: t) : v list = (fst tree)
-  let compare (_: t) (_: t) (x: v) (y: v) : Cost.t =
+  let elements (tree: t) : node list = (fst tree)
+  let compare (x: node) (y: node) : Cost.t =
     let s1, s2 = (fst x), (fst y) in
     let total = ref 0 in
     let f =
@@ -74,8 +75,10 @@ module Test = struct
     (if (String.length s1) >= (String.length s2) then String.iteri (f s2) s1
      else String.iteri (f s1) s2);
     Cost.of_int (!total)
-    
-  let print_v (x: v) = print_int (snd x)
+
+  let label (element: node) : string = string_of_int (snd element)
+  let value (element: node) : v = snd element
+  let root (tree: t) : node = List.hd (fst tree)
 end
 
 module Diff = Diffing.Make(Test)
@@ -96,5 +99,5 @@ let launch_test () =
   ; Tree.Node(("cd", 63), [Tree.Node(("ad", 64), [])])])]) in
   let t1 = Test.create tree1 in
   let t2 = Test.create tree2 in
-  let _ = Diff.exec t1 t2 in
-  ()
+  let patch = Diff.exec t1 t2 in
+  Diff.display patch

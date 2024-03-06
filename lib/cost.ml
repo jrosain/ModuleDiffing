@@ -15,6 +15,7 @@ let lb_ci () = 2*ci
 let lb_cd () = 2*cd
 let ub_ci () = 2*ci
 let ub_cd () = 2*cd
+let prune_rule_3 () = 2*(ci + cd)
 
 let f_conditional_move (f: 'a -> 'a -> t) : ('a -> 'a -> t) =
   fun x y -> cm - (f x y)

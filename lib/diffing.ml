@@ -1,5 +1,5 @@
 module Make(I: Sig.INPUT) = struct
-  type patch = Empty
+  type patch = (I.node Sig.patch)
 
   (* -------------------- Graph definition -------------------- *)
   
@@ -7,7 +7,7 @@ module Make(I: Sig.INPUT) = struct
   module Node = struct
     module Input = I
     
-    type t = Original of Input.v | Minus | Plus
+    type t = Original of Input.node | Minus | Plus
     let mk v = Original v
     let minus () = Minus
     let plus () = Plus
@@ -40,28 +40,47 @@ module Make(I: Sig.INPUT) = struct
   (* -------------------- Modules instantiation -------------------- *)
 
   module P = Pruning.Make(I)(Node)(G)
+  module Dict = Dico.Make(I)
   
   (* -------------------- End of Modules instantation -------------------- *)
   
-  let exec (t1: I.t) (t2: I.t) : patch =
+  let mhdiff (t1: I.t) (t2: I.t) : patch =
     let graph = create_bipartite t1 t2 in
     Printf.printf "#edges before prune: %d\n" (G.nb_edges graph);
     let graph = P.prune t1 t2 graph in
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
-    G.iter_edges
-      (fun x y ->
-        print_string "";
-        (match x with
-        | Node.Plus -> print_string "+"
-        | Node.Minus -> print_string "-"
-        | Node.Original m -> I.print_v m);
-        print_string ",";
-        (match y with
-        | Node.Plus -> print_string "+"
-        | Node.Minus -> print_string "-"
-        | Node.Original m -> I.print_v m);
-        print_string " ")
-      graph;
-    (* Then flows then patch reconstruction *)
-    Empty
+    (* G.iter_edges *)
+    (*   (fun x y -> *)
+    (*     match (x, y) with *)
+    (*     | Node.Plus, Node.Minus | Node.Minus, Node.Plus -> Printf.printf "-,+ " *)
+    (*     | Node.Plus, Node.Original x' | Node.Original x', Node.Plus *)
+    (*       -> Printf.printf "%s,+ " (I.label x') *)
+    (*     | Node.Minus, Node.Original x' | Node.Original x', Node.Minus *)
+    (*       -> Printf.printf "-,%s " (I.label x') *)
+    (*     | Node.Original x', Node.Original y' -> *)
+    (*        Printf.printf "%s,%s " (I.label x') (I.label y') *)
+    (*     | _, _ -> failwith "internal error") graph; *)
+    []
+  
+  let dictionnary (t1: I.t) (t2: I.t) : patch =
+    Dict.diffing t1 t2
+
+  let exec (t1: I.t) (t2: I.t) : patch =
+    if !Opt.dico then dictionnary t1 t2
+    else mhdiff t1 t2
+
+  (* -------------------- Printing the patch -------------------- *)
+
+  let display (patch: patch) : unit=
+    let rec aux (modif: patch) : unit =
+      match modif with
+      | [] -> ()
+      | h :: t ->
+         (match h with
+          | Ins node -> Printf.printf "* Insertion: %s\n" (I.label node)
+          | Del node -> Printf.printf "* Deletion: %s\n" (I.label node)
+          | Upd (n1, n2) -> Printf.printf "* Update: %s --> %s\n" (I.label n1) (I.label n2)
+          | _ -> failwith "internal error");
+         aux t
+    in aux patch
 end

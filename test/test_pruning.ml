@@ -46,34 +46,38 @@ end
 module Test = struct
   type i = ((int -> string) * BinaryTree.t)
   type v = int
-  type t = (v list * i)
+  type node = (string * v)
+  type t = (node list * i)
 
   let create (input: i) : t =
-    let rec aux (tree: BinaryTree.t) (curr: v list) : v list =
+    let rec aux (tree: BinaryTree.t) (curr: node list) : node list =
       match tree with
       | Leaf -> curr
       | Node (left, value, right) ->
-         aux (right) (aux (left) (value :: curr))
+         aux (right) (aux (left) (((fst input) value, value) :: curr))
     in (aux (snd input) [], input)
 
-  let parent (input: t) (index: v) : v option =
-    BinaryTree.parent (snd (snd input)) index
+  let parent (input: t) (index: node) : node option =
+    match (BinaryTree.parent (snd (snd input)) (snd index)) with
+    | None -> None
+    | Some v -> Some ((fst index), v)
 
-  let children (input: t) (index: v) : v list =
-    BinaryTree.children (snd (snd input)) index
+  let children (input: t) (index: node) : node list =
+    let children = BinaryTree.children (snd (snd input)) (snd index) in
+    List.map (fun c -> ((fst (snd input)) c, c)) children
 
-  let elements (input: t) : v list = (fst input)
+  let elements (input: t) : node list = (fst input)
 
-  let print_v (x: v) : unit =
-    Printf.printf "%d" x
+  let label (element: node) : string = fst element
+  let value (element: node) : v = snd element
+  let root  (tree: t) : node =
+    match (snd (snd tree)) with
+    | Leaf -> ("", -1)
+    | Node (_, value, _) -> ((fst (snd tree)) value, value)
 
-  (*let to_string (input: t) (x: v) : string =
-    let label = (fst (snd input)) x in
-    label ^ " (" ^ (string_of_int x) ^ ")"*)
-
-  let compare (input1: t) (input2: t) (x: v) (y: v) : Cost.t =
-    let s1 = (fst (snd input1)) x in
-    let s2 = (fst (snd input2)) y in
+  let compare (x: node) (y: node) : Cost.t =
+    let s1 = label x in
+    let s2 = label y in
     let total = ref 0 in
     let f =
       (fun dest i c ->
@@ -82,12 +86,13 @@ module Test = struct
     (if (String.length s1) >= (String.length s2) then String.iteri (f s2) s1
      else String.iteri (f s1) s2);
     Cost.of_int (!total)
+
 end
 
 module Node = struct
   module Input = Test
   
-  type t = Original of Input.v | Minus | Plus
+  type t = Original of Input.node | Minus | Plus
   let mk v = Original v
   let minus () = Minus
   let plus () = Plus
@@ -137,6 +142,15 @@ let cost_pp ppf c = Fmt.pf ppf "Cost(%d)" (Cost.to_int c)
 let cost_equal (ca: Cost.t) (cb: Cost.t) : bool = ((Cost.compare ca cb) = 0)
 let cost_t = Alcotest.testable cost_pp cost_equal
 
+let node = function
+  | 1 -> "a", 1
+  | 2 -> "d", 2
+  | 3 -> "f", 3
+  | 6 -> "a", 6
+  | 7 -> "c", 7
+  | 8 -> "g", 8
+  | _ -> failwith "internal error"
+
 (* ---------------------------------------------------------------------------------------------- *)
 (* FORCED MOVES *)
 
@@ -145,35 +159,35 @@ let test_trivial_root_forced_move_left () =
   let test1, test2, graph = trivial_example() in
   List.iter
     (fun v ->
-      let fcost = P.forced_move_left test2 graph v 6 in
+      let fcost = P.forced_move_left test2 graph v (node 6) in
       Alcotest.(check cost_t) "forced move cost on non-leaf in full bipartite should be null"
-        (Cost.null) (fcost)) (Test.children test1 1)
+        (Cost.null) (fcost)) (Test.children test1 (node 1))
 
 (* The cost of the forced move between a root and a leaf should be non-null on a full bipartite.  *)
 let test_trivial_non_root_forced_move_left () =
   let test1, test2, graph = trivial_example() in
   List.iter
     (fun v ->
-      let fcost = P.forced_move_left test2 graph v 7 in
+      let fcost = P.forced_move_left test2 graph v (node 7) in
       Alcotest.(check cost_t) "forced move cost on leaf in full bipartite should be Cost.cm"
-        (Cost.cm) (fcost)) (Test.children test1 1)
+        (Cost.cm) (fcost)) (Test.children test1 (node 1))
 
 (* Symmetric test. *)
 let test_trivial_root_forced_move_right () =
   let test1, test2, graph = trivial_example() in
   List.iter
     (fun v ->
-      let fcost = P.forced_move_right test1 graph 1 v in
+      let fcost = P.forced_move_right test1 graph (node 1) v in
       Alcotest.(check cost_t) "forced move cost on non-leaf in full bipartite should be null"
-        (Cost.null) (fcost)) (Test.children test2 6)
+        (Cost.null) (fcost)) (Test.children test2 (node 6))
 
 let test_trivial_non_root_forced_move_right () =
   let test1, test2, graph = trivial_example() in
   List.iter
     (fun v ->
-      let fcost = P.forced_move_right test1 graph 2 v in
+      let fcost = P.forced_move_right test1 graph (node 2) v in
       Alcotest.(check cost_t) "forced move cost on leaf in full bipartite should be Cost.cm"
-        (Cost.cm) (fcost)) (Test.children test2 6)
+        (Cost.cm) (fcost)) (Test.children test2 (node 6))
 
 (* What happens if we remove one edge ? Two edges ? All the edges ? *)
 let test_remove_edges_forced_move_left () =
@@ -181,25 +195,25 @@ let test_remove_edges_forced_move_left () =
   let test expect message = 
     List.iter
       (fun v -> 
-        let fcost = P.forced_move_left test2 graph v 6 in
+        let fcost = P.forced_move_left test2 graph v (node 6) in
         Alcotest.(check cost_t) message (expect) (fcost))
-      (Test.children test1 1)
+      (Test.children test1 (node 1))
   in
   List.iter
     (fun (a, b) ->
       G.remove_edge graph (Node.mk a) (Node.mk b);
       test (Cost.null)
         "forced move cost on roots should be null when not all edges are removed between their children")
-    [(2, 7) ; (3, 7)];
-  G.remove_edge graph (Node.mk 2) (Node.mk 8);
+    [(node 2, node 7) ; (node 3, node 7)];
+  G.remove_edge graph (Node.mk (node 2)) (Node.mk (node 8));
   (* Should be cm, 0 *)
-  let fcost = P.forced_move_left test2 graph 2 6 in
+  let fcost = P.forced_move_left test2 graph (node 2) (node 6) in
   Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
                            between their children" (Cost.cm) (fcost);
-  let fcost = P.forced_move_left test2 graph 3 6 in
+  let fcost = P.forced_move_left test2 graph (node 3) (node 6) in
   Alcotest.(check cost_t) "forced move cost on roots should be null when not all edges are removed
                            between their children" (Cost.null) (fcost);
-  G.remove_edge graph (Node.mk 3) (Node.mk 8);
+  G.remove_edge graph (Node.mk (node 3)) (Node.mk (node 8));
   test
     (Cost.cm)
     "forced move cost on roots should be not null when all edges are removed between their children"
@@ -210,25 +224,25 @@ let test_remove_edges_forced_move_right () =
   let test expect message = 
     List.iter
       (fun v -> 
-        let fcost = P.forced_move_right test1 graph 1 v in
+        let fcost = P.forced_move_right test1 graph (node 1) v in
         Alcotest.(check cost_t) message (expect) (fcost))
-      (Test.children test2 6)
+      (Test.children test2 (node 6))
   in
   List.iter
     (fun (a, b) ->
       G.remove_edge graph (Node.mk a) (Node.mk b);
       test (Cost.null)
         "forced move cost on roots should be null when not all edges are removed between their children")
-    [(2, 7) ; (2, 8)];
-  G.remove_edge graph (Node.mk 3) (Node.mk 7);
+    [(node 2, node 7) ; (node 2, node 8)];
+  G.remove_edge graph (Node.mk (node 3)) (Node.mk (node 7));
   (* Should be cm, 0 *)
-  let fcost = P.forced_move_right test1 graph 1 7 in
+  let fcost = P.forced_move_right test1 graph (node 1) (node 7) in
   Alcotest.(check cost_t) "forced move cost on roots should be not null when all edges are removed
                            between their children" (Cost.cm) (fcost);
-  let fcost = P.forced_move_right test1 graph 1 8 in
+  let fcost = P.forced_move_right test1 graph (node 1) (node 8) in
   Alcotest.(check cost_t) "forced move cost on roots should be null when an edge exists
                            between their children" (Cost.null) (fcost);
-  G.remove_edge graph (Node.mk 3) (Node.mk 8);
+  G.remove_edge graph (Node.mk (node 3)) (Node.mk (node 8));
   test
     (Cost.cm)
     "forced move cost on roots should be not null when all edges are removed between their children"
@@ -249,7 +263,7 @@ let test_record_of_update_cost () =
       "recorded cost should be computed cost"
       (Pruning.CostTable.get costs (Node.mk b) (Node.mk a)) v in
   List.iter
-    (fun m -> List.iter (fun n -> is_expected_cost m n (Test.compare test1 test2 m n)) (Test.elements test2))
+    (fun m -> List.iter (fun n -> is_expected_cost m n (Test.compare m n)) (Test.elements test2))
     (Test.elements test1)
 
 (* Test if, given a non-edge, it fails. *)
@@ -259,7 +273,7 @@ let test_fail_on_non_edge () =
   Alcotest.check_raises
     "cost table should fail if non-edge is given"
     (Failure("internal error"))
-    (fun () -> let _ = Pruning.CostTable.get costs (Node.mk 1) (Node.mk 1) in ())
+    (fun () -> let _ = Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 1)) in ())
 
 (* ---------------------------------------------------------------------------------------------- *)
 (* LOWER BOUND COMPUTATION *)
@@ -272,8 +286,8 @@ let test_lower_bound_impossible_pm_combinations() =
       msg
       (Failure("internal error"))
       (fun () -> let _ = P.lower_bound costs graph test1 test2 n m in ()) in
-  failure_test "plus should not be given as the second argument" (Node.mk 1) (Node.plus());
-  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk 6);
+  failure_test "plus should not be given as the second argument" (Node.mk (node 1)) (Node.plus());
+  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk (node 6));
   failure_test "plus/minus should be given as the first/second argument" (Node.minus()) (Node.plus())
 
 let test_plus_lower_bound() =
@@ -313,8 +327,8 @@ let test_roots_full_bipartite_lower_bound() =
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
   Alcotest.(check cost_t)
     "the lower-bound between non-leaves in a full bipartite graph should be their update cost."
-    (update_cost (fun i -> 2*i) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
-    (P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6))
+    (update_cost (fun i -> 2*i) (Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 6))))
+    (P.lower_bound costs graph test1 test2 (Node.mk (node 1)) (Node.mk (node 6)))
 
 (* The lower-bound between two leaves should always be the update cost. *)
 let test_leaves_lower_bound() =
@@ -328,11 +342,11 @@ let test_leaves_lower_bound() =
            "the lower-bound between leaves in a full bipartite graph should always be their update cost."
            (update_cost (fun i -> 2*i) (Pruning.CostTable.get costs (Node.mk m) (Node.mk n)))
            (P.lower_bound costs graph test1 test2 (Node.mk m) (Node.mk n)))
-       [7 ; 8]
+       [node 7 ; node 8]
       )
-      [2 ; 3] in
+      [node 2 ; node 3] in
   test_costs();
-  List.iter (fun (a, b) -> G.remove_edge graph (Node.mk a) (Node.mk b); test_costs())
+  List.iter (fun (a, b) -> G.remove_edge graph (Node.mk (node a)) (Node.mk (node b)); test_costs())
     [(1, 6) ; (1, 7) ; (1, 8) ; (2, 6) ; (2, 7) ; (2, 8) ; (3, 6) ; (3, 7) ; (3, 8)]
 
 (* Lower-bound between the parents are updated when there is a child that is not linked to the *)
@@ -340,50 +354,50 @@ let test_leaves_lower_bound() =
 let test_removal_of_children_edges() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  G.remove_edge graph (Node.mk 2) (Node.mk 7);
-  G.remove_edge graph (Node.mk 3) (Node.mk 7);
-  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6) in
+  G.remove_edge graph (Node.mk (node 2)) (Node.mk (node 7));
+  G.remove_edge graph (Node.mk (node 3)) (Node.mk (node 7));
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk (node 1)) (Node.mk (node 6)) in
   Alcotest.(check cost_t)
     "The lower-bound cost between nodes that have not all its children linked should not be the
      update cost"
-    (update_cost (fun c -> c + (Cost.to_int Cost.cm)) (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+    (update_cost (fun c -> c + (Cost.to_int Cost.cm)) (Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 6))))
     (fcost)
 
 (* Lower-bound between the parents s.t. none of their child are linked. *)
 let test_no_edges_means_maximum_lb_cost() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let rem_edge a b = G.remove_edge graph (Node.mk a) (Node.mk b) in
+  let rem_edge a b = G.remove_edge graph (Node.mk (node a)) (Node.mk (node b)) in
   List.iter (fun (a, b) -> rem_edge a b) [2, 7; 3, 7; 2, 8; 3, 8];
-  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 6) in
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk (node 1)) (Node.mk (node 6)) in
   Alcotest.(check cost_t)
     "The lower-bound cost between nodes that have not any of its children linked should be the
      maximum lower-bound"
     (update_cost
        (fun c ->
-         c + (Stdlib.min (List.length (Test.children test1 1)) (List.length (Test.children test2 6)))*(Cost.to_int Cost.cm))
-       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+         c + (Stdlib.min (List.length (Test.children test1 (node 1))) (List.length (Test.children test2 (node 6))))*(Cost.to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 6))))
     (fcost)
 
 (* Lower-bound between something with children and something without children. *)
 let test_children_no_children_lb_cost() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 1) (Node.mk 7) in
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk (node 1)) (Node.mk (node 7)) in
   Alcotest.(check cost_t)
     "The lower-bound cost between something with children and something with no children should take
      a big penality."
     (update_cost
-       (fun c -> 2*c + (List.length (Test.children test1 1))*(Cost.to_int Cost.cm))
-       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 7)))
+       (fun c -> 2*c + (List.length (Test.children test1 (node 1)))*(Cost.to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 7))))
     (fcost);
-  let fcost = P.lower_bound costs graph test1 test2 (Node.mk 2) (Node.mk 6) in
+  let fcost = P.lower_bound costs graph test1 test2 (Node.mk (node 2)) (Node.mk (node 6)) in
   Alcotest.(check cost_t)
     "The lower-bound cost between something with children and something with no children should take
      a big penality."
     (update_cost
-       (fun c -> 2*c + (List.length (Test.children test2 6))*(Cost.to_int Cost.cm))
-       (Pruning.CostTable.get costs (Node.mk 2) (Node.mk 6)))
+       (fun c -> 2*c + (List.length (Test.children test2 (node 6)))*(Cost.to_int Cost.cm))
+       (Pruning.CostTable.get costs (Node.mk (node 2)) (Node.mk (node 6))))
     (fcost)
 
 (* ---------------------------------------------------------------------------------------------- *)
@@ -406,8 +420,8 @@ let test_ub_plus_minus_combinations_that_should_fail() =
       msg
       (Failure("internal error"))
       (fun () -> let _ = P.compute_upper_bound n m costs test1 test2 graph in ()) in
-  failure_test "plus should not be given as the second argument" (Node.mk 1) (Node.plus());
-  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk 6);
+  failure_test "plus should not be given as the second argument" (Node.mk (node 1)) (Node.plus());
+  failure_test "minus should not be given as the first argument" (Node.minus()) (Node.mk (node 6));
   failure_test "plus/minus should be given as the first/second argument" (Node.minus()) (Node.plus())  
 
 let test_plus_upper_bound() =
@@ -433,44 +447,44 @@ let test_minus_upper_bound() =
 let test_nonleaves_no_removal_upper_bound() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let ucost = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  let ucost = P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph in
   Alcotest.(check cost_t)
     "The upper-bound cost between nodes that have all their children linked should be the
      maximum upper-bound"
     (update_cost (fun c -> 2*c + 4*(3*(Cost.to_int Cost.cc) + (Cost.to_int Cost.cm)))
-       (Pruning.CostTable.get costs (Node.mk 1) (Node.mk 6)))
+       (Pruning.CostTable.get costs (Node.mk (node 1)) (Node.mk (node 6))))
     (ucost)
 
 let test_leaves_min_ub_cost() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
   let test_mincost (a, b) = 
-    let ucost = P.compute_upper_bound (Node.mk a) (Node.mk b) costs test1 test2 graph in
+    let ucost = P.compute_upper_bound (Node.mk (node a)) (Node.mk (node b)) costs test1 test2 graph in
     Alcotest.(check cost_t)
       "The upper-bound cost between leaves should be the minimum upper-bound (i.e., the update cost)"
-      (update_cost (fun c -> 2*c) (Pruning.CostTable.get costs (Node.mk a) (Node.mk b)))
+      (update_cost (fun c -> 2*c) (Pruning.CostTable.get costs (Node.mk (node a)) (Node.mk (node b))))
       (ucost)
   in List.iter test_mincost [2, 7; 2, 8; 3, 7; 3, 8]
 
 let test_removal_irrelevant_edges_upper_bound() = 
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
-  G.remove_edge graph (Node.mk 1) (Node.plus());
+  let ub = P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph in
+  G.remove_edge graph (Node.mk (node 1)) (Node.plus());
   Alcotest.(check cost_t)
     "The upper-bound cost should not change if an irrelevant edge is removed"
     (ub)
-    (P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph)
+    (P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph)
 
 let test_removal_relevant_edges_upper_bound() = 
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
-  G.remove_edge graph (Node.mk 1) (Node.mk 7);
+  let ub = P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph in
+  G.remove_edge graph (Node.mk (node 1)) (Node.mk (node 7));
   Alcotest.(check int)
     "The upper-bound cost should change if a relevant edge is removed"
     (1)
-    (Cost.compare ub (P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph))
+    (Cost.compare ub (P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph))
 
 let rec validate msg goal = function
   | [] -> ()
@@ -488,11 +502,11 @@ let rec validate msg goal = function
 let test_removal_edges_upper_bound() = 
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  let ub = P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph in
+  let ub = P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph in
   let successive_scores =
     let compute (a, b) =
-      G.remove_edge graph (Node.mk a) (Node.mk b);
-      P.compute_upper_bound (Node.mk 1) (Node.mk 6) costs test1 test2 graph
+      G.remove_edge graph (Node.mk (node a)) (Node.mk (node b));
+      P.compute_upper_bound (Node.mk (node 1)) (Node.mk (node 6)) costs test1 test2 graph
     in List.map (compute) [(2, 7) ; (3, 8) ; (2, 8) ; (3, 8)]
   in (validate "The upper-bound should decrease when removing edges" [1] (ub::successive_scores))
 
@@ -531,14 +545,14 @@ let test_heap_init () =
 let test_heap_init_edge_removed() =
   let test1, test2, graph = trivial_example() in
   let costs = P.compute_update_costs test1 test2 (G.nb_edges graph) in
-  G.remove_edge graph (Node.mk 1) (Node.mk 7);
+  G.remove_edge graph (Node.mk (node 1)) (Node.mk (node 7));
   let ub_table = P.init_upper_bounds test1 test2 graph costs in
-  let l1 = heap_to_list (Hashtbl.find ub_table (Node.mk 1)) in
+  let l1 = heap_to_list (Hashtbl.find ub_table (Node.mk (node 1))) in
   Alcotest.(check int)
     "When edges are removed, the number of elements in an upper-bound heap should be adjusted accordingly."
     (List.length (Test.elements test2))
     (List.length l1);
-  let l7 = heap_to_list (Hashtbl.find ub_table (Node.mk 7)) in
+  let l7 = heap_to_list (Hashtbl.find ub_table (Node.mk (node 7))) in
   Alcotest.(check int)
     "When edges are removed, the number of elements in an upper-bound heap should be adjusted accordingly."
     (List.length (Test.elements test1))
@@ -567,9 +581,9 @@ let test_example_expect_edges() =
       (true)
       (G.mem_edge graph x y)
   in
-  check_edge "the roots." (Node.mk 1) (Node.mk 6);
-  check_edge "the leaves." (Node.mk 2) (Node.mk 7);
-  check_edge "the leaves." (Node.mk 3) (Node.mk 8)
+  check_edge "the roots." (Node.mk (node 1)) (Node.mk (node 6));
+  check_edge "the leaves." (Node.mk (node 2)) (Node.mk (node 7));
+  check_edge "the leaves." (Node.mk (node 3)) (Node.mk (node 8))
 
 let test_same_root_no_link_plus_minus() = 
   let test1, test2, graph = trivial_example() in
@@ -580,8 +594,8 @@ let test_same_root_no_link_plus_minus() =
       (false)
       (G.mem_edge graph x y)
   in
-  check_edge "root and minus." (Node.mk 1) (Node.minus());
-  check_edge "root and plus." (Node.plus()) (Node.mk 6)
+  check_edge "root and minus." (Node.mk (node 1)) (Node.minus());
+  check_edge "root and plus." (Node.plus()) (Node.mk (node 6))
 
 let test_edge_labeling() =
   let test1, test2, graph = trivial_example() in
