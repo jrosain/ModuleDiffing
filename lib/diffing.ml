@@ -52,18 +52,19 @@ module Make(I: Sig.INPUT) = struct
     let graph = P.prune t1 t2 graph in
     Printf.printf "#edges after prune: %d\n" (G.nb_edges graph);
     let graph = EC.bipartite_min_edge_cover graph in
+    Printf.printf "#edges after edge cover: %d\n" (G.nb_edges graph);
     (* Then flows then patch reconstruction *)
-    (* G.iter_edges *)
-    (*   (fun x y -> *)
-    (*     match (x, y) with *)
-    (*     | Node.Plus, Node.Minus | Node.Minus, Node.Plus -> Printf.printf "-,+ " *)
-    (*     | Node.Plus, Node.Original x' | Node.Original x', Node.Plus *)
-    (*       -> Printf.printf "%s,+ " (I.label x') *)
-    (*     | Node.Minus, Node.Original x' | Node.Original x', Node.Minus *)
-    (*       -> Printf.printf "-,%s " (I.label x') *)
-    (*     | Node.Original x', Node.Original y' -> *)
-    (*        Printf.printf "%s,%s " (I.label x') (I.label y') *)
-    (*     | _, _ -> failwith "internal error") graph; *)
+    G.iter_edges
+      (fun x y ->
+        match (x, y) with
+        | Node.Plus, Node.Minus | Node.Minus, Node.Plus -> Printf.printf "-,+ "
+        | Node.Plus, Node.Original x' | Node.Original x', Node.Plus
+          -> Printf.printf "%s,+ " (I.label x')
+        | Node.Minus, Node.Original x' | Node.Original x', Node.Minus
+          -> Printf.printf "-,%s " (I.label x')
+        | Node.Original x', Node.Original y' ->
+           Printf.printf "%s,%s " (I.label x') (I.label y')
+        | _, _ -> failwith "internal error") graph;
     []
   
   let dictionnary (t1: I.t) (t2: I.t) : patch =
