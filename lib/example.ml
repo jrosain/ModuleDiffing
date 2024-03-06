@@ -76,7 +76,7 @@ module Test = struct
      else String.iteri (f s1) s2);
     Cost.of_int (!total)
 
-  let label (element: node) : string = fst element
+  let label (element: node) : string = string_of_int (snd element)
   let value (element: node) : v = snd element
   let root (tree: t) : node = List.hd (fst tree)
 end

@@ -219,39 +219,25 @@ module Make(I: Sig.INPUT)(N: Sig.Node with module Input = I)(G: Sig.G with type 
       x;
     (g)
   
-  let try_remove_edge_left (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (m: G.V.t) : unit =
+  let try_pruning_rule_3 (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (m: G.V.t) : unit =
     match m with
     | N.Plus -> ()
     | N.Original _ ->
-       if List.exists
-            (fun n ->
-              if n = (N.minus()) then false
-              else (not (G.mem_edge graph (N.plus()) n)) ||
-                     (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_cd())) <= 0)
-            (G.succ graph m)
-       then G.remove_edge graph (N.minus()) m
-       else ()
+       let n = List.find_opt
+                 (fun n ->
+                   if n = (N.minus()) then false
+                   else ((G.mem_edge graph (N.plus()) n) && (* [n, +] should be in the graph *)
+                           (List.length (G.succ graph n)) = 2 && (* n should have only 2 neighbors *)
+                             (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.prune_rule_3())) <= 0)) (* cost of [m,n] should be better *)
+                 (G.succ graph m)
+       in (match n with
+           | None -> ()
+           | Some n' -> G.remove_edge graph (N.minus()) m; G.remove_edge graph n' (N.plus()))
     | _ -> failwith "internal error"
-
-  let try_remove_edge_right (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) (n: G.V.t) : unit =
-    match n with
-    | N.Minus -> ()
-    | N.Original _ ->
-       if List.exists
-            (fun m ->
-              if m = (N.plus()) then false
-              else (not (G.mem_edge graph (N.minus()) m)) ||
-                     (Cost.compare (lower_bound update graph t1 t2 m n) (Cost.lb_ci())) <= 0)
-            (G.succ graph n)
-       then G.remove_edge graph (N.plus()) n
-       else ()
-    | _ -> failwith "internal error"
-
+  
   (* Remove the edges to (+) and (-) if there exists a lower bound that is better than deletion+insertion. *)
   let prune_useless_plus_minus (graph: G.t) (t1: I.t) (t2: I.t) (update: cost_table) : G.t =
-    List.iter (try_remove_edge_left graph t1 t2 update) (G.succ graph (N.minus()));
-    List.iter (try_remove_edge_right graph t1 t2 update) (G.succ graph (N.plus()));
-    List.iter (try_remove_edge_left graph t1 t2 update) (G.succ graph (N.minus()));
+    List.iter (try_pruning_rule_3 graph t1 t2 update) (G.succ graph (N.minus()));
     graph
 
   (* Main function of pruning. *)

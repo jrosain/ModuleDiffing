@@ -35,6 +35,7 @@ val lb_ci : unit -> t
 val lb_cd : unit -> t
 val ub_ci : unit -> t
 val ub_cd : unit -> t
+val prune_rule_3 : unit -> t
 
 (** Returns a function that computes the conditional move of a given edge using a
     function that computes the forced move of this very edge. *)

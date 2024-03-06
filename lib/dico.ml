@@ -34,19 +34,18 @@ module Make(I: Sig.INPUT) = struct
          match element with
          | None -> traverse t (other) ((Label.Del node) :: acc)
          | Some value ->
-            if not (is_value_equal node value) then
-              let c1, c2 = I.children d1 node, I.children d2 value in
-              match (c1, c2) with
-              | _ :: _, _ :: _  -> traverse t (other) ((diff c1 c2 d1 d2) @ acc)
-              | _, _ -> traverse t (other) ((Label.Upd (node, value)) :: acc)
-            else
-              traverse t other acc
+            let c1, c2 = I.children d1 node, I.children d2 value in
+            match (c1, c2) with
+            | _ :: _, _ :: _  ->
+               let acc = (diff c1 c2 d1 d2) @ acc in
+               if is_value_equal node value then traverse t other acc
+               else traverse t (other) ((Label.Upd (node, value)) :: acc)
+            | _, _ -> traverse t other acc
     in
     let insertions =
       List.map (fun x -> Label.Ins x)
         (List.filter (fun node -> not (mem_element (I.label node) ld1)) ld2)
     in (traverse ld1 ld2 []) @ insertions
-
 
   let diffing (d1: I.t) (d2: I.t) : patch =
     diff [I.root d1] [I.root d2] d1 d2
