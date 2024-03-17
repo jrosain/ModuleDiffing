@@ -107,6 +107,8 @@ module AnnotationTree = struct
     in
     elements_lst [] [tree]
 
+  let compare (n1 : node) (n2 : node) : Cost.t = Cost.of_int 0 (*TODO: implement correctly*)
+
   (* NOTE: Some module declerations may have an empty name and therefor empty label *)
   let label (n : node) : string =
     match (snd n) with
@@ -133,7 +135,7 @@ module SimplifiedAST = struct
   type node = AnnotationTree.node
   type t = AnnotationTree.t
 
-  let id_counter = ref 0
+  let id_counter = ref 1 (* 0 is reserved for the toplevel (see "create" function) *)
 
   let new_id = id_counter := !id_counter + 1; !id_counter
 
@@ -191,6 +193,14 @@ module SimplifiedAST = struct
   (** Naively go through module declarations. TODO: recursion ? *)
   and get_module_declarations_info (mdl : module_declaration list) : t list = List.map get_module_declaration_info mdl
 
+  let create (s : i) : t = AnnotationTree.Node((0 ,AnnotationTree.Atplvl({tplvl_name = "toplevel"})), create_forest s)
+  let parent (tree : t) (n : node) : node option = AnnotationTree.parent tree n
+  let children (tree : t) (n : node) : node list = AnnotationTree.children tree n
+  let elements (tree : t) : node list = AnnotationTree.elements tree
+  let compare (n1 : node) (n2 : node) : Cost.t = AnnotationTree.compare n1 n2
+  let label (n : node) : string = AnnotationTree.label n
+  let value (n : node) : v = AnnotationTree.value n
+  let root (tree : t) : node = AnnotationTree.root tree
 end
 
 ;;
