@@ -108,7 +108,7 @@ module AnnotationTree = struct
     in
     elements_lst [] [tree]
 
-  let compare ((id1, annot1) : node) ((id2, annot2) : node) : Cost.t =
+  let compare ((id1, _) : node) ((id2, _) : node) : Cost.t =
     if id1 = id2 then Cost.of_int 0 else Cost.of_int 1 (* TODO: make this more interesting *)
 
   (* NOTE: Some module declerations may have an empty name and therefor empty label *)
@@ -160,7 +160,7 @@ module SimplifiedAST = struct
   and get_type_info (tl : type_declaration list) : t list (*Multiple leaves*) =
     match tl with
     |[] -> []
-    |t::ts -> (Leaf(nex_id, Atype({ptype_name = t.ptype_name;
+    |t::ts -> (Leaf(new_id, Atype({ptype_name = t.ptype_name;
                                    ptype_params = t.ptype_params;
                                    ptype_kind = t.ptype_kind;
                                    ptype_private = t.ptype_private;
