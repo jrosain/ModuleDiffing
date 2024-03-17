@@ -70,9 +70,10 @@ module AnnotationTree = struct
   type node = annotation_node
   type t = annotation_tree
 
+  let subtrees_to_node_list (l : t list) : node list = List.map (fun x -> match x with | Node (n,_) -> n | Leaf(n) -> n) l
   let parent (tree : t) (n : node) : node option =
     let rec parent_lst (tree : t list) (n : node) = match tree with
-      | (Node((id', a), l)) :: _ when (List.mem l n)  -> Some(id',a)
+      | (Node((id', a), l)) :: _ when (List.mem n (subtrees_to_node_list l))  -> Some(id',a)
       | (Node(_, l)) :: q -> begin
           match parent_lst l n with
           | None -> parent_lst q n
@@ -86,7 +87,7 @@ module AnnotationTree = struct
     let rec children_lst (tree : t list) (n : node) : node list option =
       match tree with
       | [] -> None
-      | (Node(n',l)) :: _  when n' = n -> Some(List.map (fun x -> match x with | Node(n,_) -> n | Leaf(n) -> n) l)
+      | (Node(n',l)) :: _  when n' = n -> Some(subtrees_to_node_list l)
       | (Node(_,l)) :: q -> begin
           match children_lst l n with
           | None -> children_lst q n
@@ -107,7 +108,8 @@ module AnnotationTree = struct
     in
     elements_lst [] [tree]
 
-  let compare (n1 : node) (n2 : node) : Cost.t = Cost.of_int 0 (*TODO: implement correctly*)
+  let compare ((id1, annot1) : node) ((id2, annot2) : node) : Cost.t =
+    if id1 = id2 then Cost.of_int 0 else Cost.of_int 1 (* TODO: make this more interesting *)
 
   (* NOTE: Some module declerations may have an empty name and therefor empty label *)
   let label (n : node) : string =
