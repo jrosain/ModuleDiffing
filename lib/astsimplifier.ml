@@ -42,6 +42,13 @@ module AnnotationTree = struct
       (* The type is in the descriptor *)
       (* The loc is that of the declaration and not of the type *)
     }
+  
+  and module_type_declaration_annotation =
+    {
+      pmtd_name: string loc;
+      pmtd_loc: Location.t;
+      pmtd_desc: module_type_descriptor;
+    }
 
   and module_type_descriptor = (* TODO: these should probably all have their own (short) annotation type *)
     | Ident
@@ -59,6 +66,7 @@ module AnnotationTree = struct
     |Atype of type_declaration_annotation
     |Aexn of type_exception_annotation
     |Amod_decl of module_declaration_annotation
+    |Amod_type_decl of module_type_declaration_annotation
 
   and annotation_node = int * annotation
 
@@ -118,9 +126,10 @@ module AnnotationTree = struct
     | Aval(a) -> a.pval_name.txt
     | Atype(a) -> a.ptype_name.txt
     | Aexn(a) -> a.ptyexn_name.txt
-    | Amod_decl(a) -> match a.pmd_name.txt with
+    | Amod_decl(a) -> begin match a.pmd_name.txt with
       | Some (s) -> s
-      | None -> ""
+      | None -> "" end
+    | Amod_type_decl(a) -> a.pmtd_name.txt 
 
   let value (n : node) : v = fst n
   let root (tree : t) : node = match tree with Node(n, _) -> n | Leaf(n) -> n
@@ -191,6 +200,29 @@ module SimplifiedAST = struct
     match s_opt with
     | None -> Leaf(new_id, mod_decl_annot)
     | Some(s) -> Node((new_id, mod_decl_annot), create_forest(s))
+
+  and get_module_type_info (mtd : module_type_declaration) : t = 
+    let descriptor, s_opt = match mtd.pmtd_type with 
+      Some(mt) -> begin match mt.pmty_desc with 
+        | Pmty_ident(_) -> AnnotationTree.Ident, None
+        | Pmty_signature(s) -> AnnotationTree.Signature, Some(s)
+        | Pmty_functor(_) -> AnnotationTree.Functor, None
+        | Pmty_with(_,_) -> AnnotationTree.With, None
+        | Pmty_typeof(_) -> AnnotationTree.TypeOf, None
+        | Pmty_extension(_) -> AnnotationTree.Extension, None
+        | Pmty_alias(_) -> AnnotationTree.Alias, None end 
+      |None -> failwith "No module_type"
+    in
+    (* In any case the annotation is the same *)
+    let mod_type_annot = AnnotationTree.Amod_type_decl({pmtd_name = mtd.pmtd_name;
+                                    pmtd_loc = mtd.pmtd_loc;
+                                    pmtd_desc = descriptor;
+                                   })
+    in
+    (* If it is a signature, recursively build a subtree *)
+    match s_opt with
+    | None -> Leaf(new_id, mod_type_annot)
+    | Some(s) -> Node((new_id, mod_type_annot), create_forest(s))
 
   (** Naively go through module declarations. TODO: recursion ? *)
   and get_module_declarations_info (mdl : module_declaration list) : t list = List.map get_module_declaration_info mdl
